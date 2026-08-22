@@ -1,6 +1,6 @@
 {
 	"name": "@sosraciel-lamda/lam-chain",
-	"version": "1.0.1",
+	"version": "1.0.4",
 	"main": "dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
@@ -22,7 +22,9 @@
 	"license": "ISC",
 	"description": "ContextGraph orchestration engine and LaMChain tool-call/verification utilities for LaMDA",
 	"files": [
-		"dist"
+		"dist",
+		"data",
+		"schema"
 	],
 	"dependencies": {
 		"@anush008/tokenizers": "^0.0.0",

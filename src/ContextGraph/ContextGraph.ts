@@ -7,7 +7,7 @@ export interface ContextSchema { };
 /** 标准化上下文预算结构 */
 export type ContextBudget = {
     /** 最大 Token 长度预算 */
-    maxTokens: number;
+    maxLength: number;
     /** 最大消息条数预算 */
     maxCount: number;
 };
@@ -17,9 +17,9 @@ export type BlockProcessResult<Context = ContextSchema> = {
     /** 最终生成的 Context[] 消息列表 */
     context: Context[];
     /** 区块计算得出的 Token 消耗数 */
-    tokenCount: number;
+    contextLength: number;
     /** 区块包含的消息条数 */
-    msgCount: number;
+    contextCount: number;
 };
 
 /** 传递给区块处理器的环境上下文 */
@@ -65,7 +65,7 @@ export type ConstantBlock<Context = ContextSchema> = ContextBlockBase<{
 /** 预算块：接收计算出的可用预算，返回 Context[] 或自定义 BlockProcessResult */
 export type BudgetBlock<Context = ContextSchema> = ContextBlockBase<{
     type: 'budget';
-    context: (availableBudget: ContextBudget) => MPromise<Context[] | { context: Context[]; tokenCount?: number }>;
+    context: (availableBudget: ContextBudget) => MPromise<Context[] | { context: Context[]; contextLength?: number }>;
 }>;
 
 /** 托管滑窗块：通过 Context 流生成器拉取历史，由块处理器统一做预算截断与拦截 */
@@ -99,14 +99,14 @@ export const blockProcessorTable = {
     constant: async <Context = ContextSchema>(block: ConstantBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
         const { id, verbose = true } = block;
         const ctx = typeof block.context === 'function' ? await block.context() : block.context;
-        const tokenCount = await calcContextLength(ctx, procCtx.computeLength);
-        const msgCount = ctx.length;
+        const contextLength = await calcContextLength(ctx, procCtx.computeLength);
+        const contextCount = ctx.length;
 
         if (verbose) {
-            SLogger.info(`[ContextGraph:constant] id:${id} 求值完成 count:${msgCount} tokenCount:${tokenCount}`);
+            SLogger.info(`[ContextGraph:constant] id:${id} 求值完成 contextCount:${contextCount} contextLength:${contextLength}`);
         }
 
-        return { context: ctx, tokenCount, msgCount };
+        return { context: ctx, contextLength, contextCount };
     },
 
     /** 预算块处理器 */
@@ -115,16 +115,16 @@ export const blockProcessorTable = {
         const res = await block.context(procCtx.availableBudget);
 
         const context = Array.isArray(res) ? res : res.context;
-        const tokenCount = Array.isArray(res) || res.tokenCount == undefined
+        const contextLength = Array.isArray(res) || res.contextLength == undefined
             ? await calcContextLength(context, procCtx.computeLength)
-            : res.tokenCount;
-        const msgCount = context.length;
+            : res.contextLength;
+        const contextCount = context.length;
 
         if (verbose) {
-            SLogger.info(`[ContextGraph:budget] id:${id} 求值完成 count:${msgCount} tokenCount:${tokenCount}`);
+            SLogger.info(`[ContextGraph:budget] id:${id} 求值完成 contextCount:${contextCount} contextLength:${contextLength}`);
         }
 
-        return { context, tokenCount, msgCount };
+        return { context, contextLength, contextCount };
     },
 
     /** 托管滑窗块处理器：统一进行 Token/条数上限校验与拦截器判断 */
@@ -132,7 +132,7 @@ export const blockProcessorTable = {
         const { stream, onIntercept, verbose = true, id } = block;
         const { availableBudget, computeLength } = procCtx;
 
-        const maxTokens = availableBudget.maxTokens;
+        const maxLength = availableBudget.maxLength;
         const maxCount = availableBudget.maxCount;
 
         const chain: Context[] = [];
@@ -142,19 +142,19 @@ export const blockProcessorTable = {
         const iterable = typeof stream === 'function' ? stream(availableBudget) : stream;
 
         for await (const msg of iterable) {
-            const msgLen = await computeLength(msg);
-            const wouldBeLength = totalLength + msgLen;
+            const messageLength = await computeLength(msg);
+            const wouldBeLength = totalLength + messageLength;
             const wouldBeCount = totalCount + 1;
 
             // 校验消息条数超限
             if (wouldBeCount > maxCount) {
-                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 消息条数超限 maxCount:${maxCount}`);
+                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 消息条数超限 最大允许条数:${maxCount}`);
                 break;
             }
 
             // 校验 Token 长度超限
-            if (wouldBeLength > maxTokens) {
-                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} Token 长度超限 totalLength:${totalLength} msgLen:${msgLen} maxTokens:${maxTokens}`);
+            if (wouldBeLength > maxLength) {
+                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} Token 长度超限 单消息长度:${messageLength} 总长度:${totalLength} 最大允许长度:${maxLength}`);
                 break;
             }
 
@@ -162,14 +162,14 @@ export const blockProcessorTable = {
             if (onIntercept != undefined) {
                 const interceptRes = await onIntercept(msg);
                 if (interceptRes === 'reject') {
-                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(不计入) count:${wouldBeCount}`);
+                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(不计入)`);
                     break;
                 }
                 if (interceptRes === 'include') {
                     chain.unshift(msg);
                     totalLength = wouldBeLength;
                     totalCount = wouldBeCount;
-                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(计入) count:${totalCount} 总长度:${totalLength}`);
+                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(计入) 链接第 ${totalCount} 条 单消息长度:${messageLength} 总长度:${totalLength}`);
                     break;
                 }
             }
@@ -177,13 +177,14 @@ export const blockProcessorTable = {
             chain.unshift(msg);
             totalLength = wouldBeLength;
             totalCount = wouldBeCount;
-            if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 链接第 ${totalCount} 条 长度:${msgLen} 总长度:${totalLength}`);
+            if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 链接第 ${totalCount} 条 单消息长度:${messageLength} 总长度:${totalLength}`);
         }
+        if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 链接完成 contextCount:${totalCount} contextLength:${totalLength}`);
 
         return {
             context: chain,
-            tokenCount: totalLength,
-            msgCount: totalCount,
+            contextLength: totalLength,
+            contextCount : totalCount,
         };
     },
 
@@ -209,14 +210,14 @@ export const blockProcessorTable = {
 
         // 递归求解子图并计算消耗
         const context = await subGraphInstance.build();
-        const tokenCount = await calcContextLength(context, computeLength);
-        const msgCount = context.length;
+        const contextLength = await calcContextLength(context, computeLength);
+        const contextCount = context.length;
 
         if (verbose) {
-            SLogger.info(`[ContextGraph:graph] id:${id} 子图编排完成 count:${msgCount} tokenCount:${tokenCount}`);
+            SLogger.info(`[ContextGraph:graph] id:${id} 子图编排完成 contextCount:${contextCount} contextLength:${contextLength}`);
         }
 
-        return { context, tokenCount, msgCount };
+        return { context, contextLength, contextCount };
     },
 } as const;
 
@@ -226,7 +227,7 @@ export type BlockProcessorTable = typeof blockProcessorTable;
 /** ContextGraph 构造函数配置选项 (单参形式)  */
 export type ContextGraphOption<Context = ContextSchema> = {
     /** 上下文区块列表 (物理拼接排版顺序以传入此数组的顺序为准)  */
-    blocks: ContextGraphBlock<Context>[];
+    blockList: ContextGraphBlock<Context>[];
     /** 全局预算上限 (包含最大 Token 长度与最大消息条数) 缺失则为无限 */
     maxBudget?: Partial<ContextBudget>;
     /** 单条 Context 单元的 Token 长度计算函数 若不传则永远计算为0 */
@@ -237,23 +238,23 @@ export type ContextGraphOption<Context = ContextSchema> = {
 
 /** 上下文图谱编排器 */
 export class ContextGraph<Context = ContextSchema> {
-    private readonly _blocks: ContextGraphBlock<Context>[];
+    private readonly _blockList: ContextGraphBlock<Context>[];
     private readonly maxBudget: ContextBudget;
     private readonly computeLength: (msg: Context) => MPromise<number>;
     private readonly verbose: boolean;
     /** 获取当前编排的所有区块 (对外暴露 DeepReadonly 视图)  */
-    public get blocks(): DeepReadonly<ContextGraphBlock<Context>[]> {
-        return this._blocks as DeepReadonly<ContextGraphBlock<Context>[]>;
+    public get blockList(): DeepReadonly<ContextGraphBlock<Context>[]> {
+        return this._blockList as DeepReadonly<ContextGraphBlock<Context>[]>;
     }
 
     /** 构造函数 (单参形式)
      * @param opt - 配置选项
      */
     constructor(opt: ContextGraphOption<Context>) {
-        this._blocks = [...opt.blocks];
+        this._blockList = [...opt.blockList];
         this.maxBudget = {
             maxCount: opt.maxBudget?.maxCount ?? Infinity,
-            maxTokens: opt.maxBudget?.maxTokens ?? Infinity,
+            maxLength: opt.maxBudget?.maxLength ?? Infinity,
         };
         this.computeLength = opt.computeLength??(()=>0);
         this.verbose = opt.verbose ?? true;
@@ -276,13 +277,13 @@ export class ContextGraph<Context = ContextSchema> {
         block: ContextGraphBlock<Context> | ContextGraphBlock<Context>[];
     }): this {
         const { targetId, position, block } = opt;
-        const index = this._blocks.findIndex(b => b.id === targetId);
+        const index = this._blockList.findIndex(b => b.id === targetId);
         if (index === -1)
             throw throwError(`ContextGraph.addBlock 未找到目标区块 targetId: '${targetId}'`);
 
         const insertIndex = position === 'before' ? index : index + 1;
-        const insertBlocks = Array.isArray(block) ? block : [block];
-        this._blocks.splice(insertIndex, 0, ...insertBlocks);
+        const insertBlockList = Array.isArray(block) ? block : [block];
+        this._blockList.splice(insertIndex, 0, ...insertBlockList);
 
         return this;
     }
@@ -291,8 +292,8 @@ export class ContextGraph<Context = ContextSchema> {
      * @param block - 要插入的区块或区块数组
      * @returns this 支持链式调用
      */
-    unshiftBlock(...blocks: ContextGraphBlock<Context>[]): this {
-        this._blocks.unshift(...blocks);
+    unshiftBlock(...block: ContextGraphBlock<Context>[]): this {
+        this._blockList.unshift(...block);
         return this;
     }
 
@@ -300,8 +301,8 @@ export class ContextGraph<Context = ContextSchema> {
      * @param block - 要追加的区块或区块数组
      * @returns this 支持链式调用
      */
-    pushBlock(... blocks: ContextGraphBlock<Context>[]): this {
-        this._blocks.push(...blocks);
+    pushBlock(... block: ContextGraphBlock<Context>[]): this {
+        this._blockList.push(...block);
         return this;
     }
 
@@ -312,16 +313,16 @@ export class ContextGraph<Context = ContextSchema> {
      * @throws 未找到目标区块时抛出错误
      */
     replaceBlock(targetId: string, newBlock?: ContextGraphBlock<Context> | ContextGraphBlock<Context>[] | undefined): this {
-        const idx = this._blocks.findIndex(b => b.id === targetId);
+        const idx = this._blockList.findIndex(b => b.id === targetId);
         if (idx === -1) throw throwError(`ContextGraph.replaceBlock 未找到目标区块 targetId: '${targetId}'`);
 
         if (newBlock === undefined) {
             // 传入 undefined 时执行删除
-            this._blocks.splice(idx, 1);
+            this._blockList.splice(idx, 1);
         } else {
             // 替换为单块或多块
-            const insertBlocks = Array.isArray(newBlock) ? newBlock : [newBlock];
-            this._blocks.splice(idx, 1, ...insertBlocks);
+            const insertBlockList = Array.isArray(newBlock) ? newBlock : [newBlock];
+            this._blockList.splice(idx, 1, ...insertBlockList);
         }
 
         return this;
@@ -349,10 +350,10 @@ export class ContextGraph<Context = ContextSchema> {
      */
     async build(): Promise<Context[]> {
         // 1. 记录原始索引，确保最终输出物理位置不随优先级排序改变
-        const indexedBlocks = this._blocks.map((block, originalIndex) => ({ block, originalIndex }));
+        const indexedBlockList = this._blockList.map((block, originalIndex) => ({ block, originalIndex }));
 
         // 2. 按 priority 降序排序进行 Token 预算抢占分配
-        const sortedByPriority = [...indexedBlocks].sort((a, b) => {
+        const sortedByPriority = [...indexedBlockList].sort((a, b) => {
             // 1. 优先级降序（数值大的优先）
             const priorityDiff = b.block.priority - a.block.priority;
             if (priorityDiff !== 0) return priorityDiff;
@@ -361,30 +362,30 @@ export class ContextGraph<Context = ContextSchema> {
         });
 
         const remainingGlobalBudget: ContextBudget = { ...this.maxBudget };
-        const resultsByOriginalIndex: (Context[] | undefined)[] = new Array(this._blocks.length);
+        const resultsByOriginalIndex: (Context[] | undefined)[] = new Array(this._blockList.length);
 
         // 3. 按优先级求值与分配预算
         for (const { block, originalIndex } of sortedByPriority) {
             const droppable = block.droppable ?? false;
             const blockVerbose = block.verbose ?? this.verbose;
 
-            const minTokens = block.minBudget?.maxTokens ?? 0;
+            const minToken = block.minBudget?.maxLength ?? 0;
             const minCount = block.minBudget?.maxCount ?? 0;
 
             // 计算可用预算：通过 Math.max 确保即使全局预算为 0，保底 minBudget 也能顶开全局拿到配额
-            let allocTokens = Math.max(remainingGlobalBudget.maxTokens, minTokens);
+            let allocLength = Math.max(remainingGlobalBudget.maxLength, minToken);
             let allocCount = Math.max(remainingGlobalBudget.maxCount, minCount);
 
             // 若配置了块级别 maxBudget 约束上限，取最小值
-            if (block.maxBudget?.maxTokens != undefined) {
-                allocTokens = Math.min(allocTokens, block.maxBudget.maxTokens);
+            if (block.maxBudget?.maxLength != undefined) {
+                allocLength = Math.min(allocLength, block.maxBudget.maxLength);
             }
             if (block.maxBudget?.maxCount != undefined) {
                 allocCount = Math.min(allocCount, block.maxBudget.maxCount);
             }
 
             const availableBudget: ContextBudget = {
-                maxTokens: allocTokens,
+                maxLength: allocLength,
                 maxCount: allocCount,
             };
 
@@ -396,23 +397,23 @@ export class ContextGraph<Context = ContextSchema> {
 
             if (res == undefined) continue;
 
-            const { context, tokenCount, msgCount } = res;
+            const { context, contextLength, contextCount } = res;
 
-            const isTokenExceeded = tokenCount > availableBudget.maxTokens;
-            const isCountExceeded = msgCount > availableBudget.maxCount;
+            const isLengthExceeded = contextLength > availableBudget.maxLength;
+            const isCountExceeded = contextCount > availableBudget.maxCount;
 
             // 校验预算超限 (达到 Token 或条数任意一项即判定超限)
-            if (isTokenExceeded || isCountExceeded) {
+            if (isLengthExceeded || isCountExceeded) {
                 if (!droppable) {
-                    throw new Error(
+                    throw throwError(
                         `[ContextGraph] 区块预算超限且不可抛弃: id=${block.id}, type=${block.type}, priority=${block.priority}, ` +
-                        `requiredTokens:${tokenCount}/${availableBudget.maxTokens}, requiredCount:${msgCount}/${availableBudget.maxCount}`
+                        `需求长度:${contextLength}/${availableBudget.maxLength}, 需求条数:${contextCount}/${availableBudget.maxCount}`
                     );
                 } else {
                     if (blockVerbose) {
                         SLogger.warn(
-                            `[ContextGraph] 可抛弃区块预算不足已丢弃: id=${block.id}, ` +
-                            `requiredTokens:${tokenCount}/${availableBudget.maxTokens}, requiredCount:${msgCount}/${availableBudget.maxCount}`
+                            `[ContextGraph] 可抛弃区块预算不足已丢弃: id=${block.id}, type=${block.type}, priority=${block.priority}, ` +
+                            `需求长度:${contextLength}/${availableBudget.maxLength}, 需求条数:${contextCount}/${availableBudget.maxCount}`
                         );
                     }
                     resultsByOriginalIndex[originalIndex] = [];
@@ -421,14 +422,14 @@ export class ContextGraph<Context = ContextSchema> {
             }
 
             // 扣减全局剩余预算
-            remainingGlobalBudget.maxTokens -= tokenCount;
-            remainingGlobalBudget.maxCount -= msgCount;
+            remainingGlobalBudget.maxLength -= contextLength;
+            remainingGlobalBudget.maxCount -= contextCount;
             resultsByOriginalIndex[originalIndex] = context;
 
             if (blockVerbose) {
                 SLogger.info(
-                    `[ContextGraph] 区块装载成功: id=${block.id}, type=${block.type}, ` +
-                    `tokens:${tokenCount}, count:${msgCount}, 剩余GlobalTokens:${remainingGlobalBudget.maxTokens}`
+                    `[ContextGraph] 区块装载成功: id=${block.id}, type=${block.type}, priority=${block.priority}, ` +
+                    `contextLength:${contextLength}, contextCount:${contextCount}, 剩余GlobalLength:${remainingGlobalBudget.maxLength}, 剩余GlobalCount:${remainingGlobalBudget.maxCount}`
                 );
             }
         }
