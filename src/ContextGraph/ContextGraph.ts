@@ -366,6 +366,12 @@ export class ContextGraph<Context = ContextSchema> {
         const remainingGlobalBudget: ContextBudget = { ...this.maxBudget };
         const resultsByOriginalIndex: (Context[] | undefined)[] = new Array(this._blockList.length);
 
+        if (this.verbose) {
+            SLogger.info(
+                `[ContextGraph] 开始编排上下文 总预算 maxLength:${this.maxBudget.maxLength}, maxCount:${this.maxBudget.maxCount}, 区块总数:${this._blockList.length}`
+            );
+        }
+
         // 3. 按优先级求值与分配预算
         for (const { block, originalIndex } of sortedByPriority) {
             const droppable = block.droppable ?? false;
