@@ -46,6 +46,10 @@ export type ContextBlockBase<T> = {
     priority: number;
     /** 是否可抛弃，默认 false。若预算不足且为 false 则中断抛错 */
     droppable?: boolean;
+    /** 是否忽略长度限制，默认 false。若为 true 则该块可用长度视为无限 */
+    ignoreLength?: boolean;
+    /** 是否忽略消息条数限制，默认 false。若为 true 则该块可用条数视为无限 */
+    ignoreCount?: boolean;
     /** 块的独立保证保底预算 (即使全局预算为 0，也会顶开获得至少此配额) */
     minBudget?: Partial<ContextBudget>;
     /** 块级别的最大预算上限约束 */
@@ -352,12 +356,10 @@ export class ContextGraph<Context = ContextSchema> {
         // 1. 记录原始索引，确保最终输出物理位置不随优先级排序改变
         const indexedBlockList = this._blockList.map((block, originalIndex) => ({ block, originalIndex }));
 
-        // 2. 按 priority 降序排序进行 Token 预算抢占分配
+        // 2. 优先级降序 > 物理索引升序稳定排序
         const sortedByPriority = [...indexedBlockList].sort((a, b) => {
-            // 1. 优先级降序（数值大的优先）
             const priorityDiff = b.block.priority - a.block.priority;
             if (priorityDiff !== 0) return priorityDiff;
-            // 2. 优先级相等时，按原始物理索引升序（从上到下）
             return a.originalIndex - b.originalIndex;
         });
 
@@ -368,15 +370,24 @@ export class ContextGraph<Context = ContextSchema> {
         for (const { block, originalIndex } of sortedByPriority) {
             const droppable = block.droppable ?? false;
             const blockVerbose = block.verbose ?? this.verbose;
+            const ignoreLength = block.ignoreLength ?? false;
+            const ignoreCount = block.ignoreCount ?? false;
 
-            const minToken = block.minBudget?.maxLength ?? 0;
+            const minLength = block.minBudget?.maxLength ?? 0;
             const minCount = block.minBudget?.maxCount ?? 0;
 
             // 计算可用预算：通过 Math.max 确保即使全局预算为 0，保底 minBudget 也能顶开全局拿到配额
-            let allocLength = Math.max(remainingGlobalBudget.maxLength, minToken);
-            let allocCount = Math.max(remainingGlobalBudget.maxCount, minCount);
+            // 计算长度预算：若 ignoreLength 则不取全局剩余预算，默认为 Infinity
+            let allocLength = ignoreLength
+                ? Infinity
+                : Math.max(remainingGlobalBudget.maxLength, minLength);
 
-            // 若配置了块级别 maxBudget 约束上限，取最小值
+            // 计算条数预算：若 ignoreCount 则不取全局剩余预算，默认为 Infinity
+            let allocCount = ignoreCount
+                ? Infinity
+                : Math.max(remainingGlobalBudget.maxCount, minCount);
+
+            // 若块自身配置了 maxBudget 约束上限，对其进行裁剪收窄
             if (block.maxBudget?.maxLength != undefined) {
                 allocLength = Math.min(allocLength, block.maxBudget.maxLength);
             }
@@ -421,15 +432,20 @@ export class ContextGraph<Context = ContextSchema> {
                 }
             }
 
-            // 扣减全局剩余预算
-            remainingGlobalBudget.maxLength -= contextLength;
-            remainingGlobalBudget.maxCount -= contextCount;
+            // 仅在未忽略时，才扣减全局剩余预算
+            if (!ignoreLength)
+                remainingGlobalBudget.maxLength -= contextLength;
+            if (!ignoreCount)
+                remainingGlobalBudget.maxCount -= contextCount;
+
             resultsByOriginalIndex[originalIndex] = context;
 
             if (blockVerbose) {
                 SLogger.info(
                     `[ContextGraph] 区块装载成功: id=${block.id}, type=${block.type}, priority=${block.priority}, ` +
-                    `contextLength:${contextLength}, contextCount:${contextCount}, 剩余GlobalLength:${remainingGlobalBudget.maxLength}, 剩余GlobalCount:${remainingGlobalBudget.maxCount}`
+                    `contextLength:${contextLength}${ignoreLength ? '(不计入总长度)' : ''}, ` +
+                    `contextCount:${contextCount}${ignoreCount ? '(不计入总条数)' : ''}, ` +
+                    `剩余GlobalLength:${remainingGlobalBudget.maxLength}, 剩余GlobalCount:${remainingGlobalBudget.maxCount}`
                 );
             }
         }
