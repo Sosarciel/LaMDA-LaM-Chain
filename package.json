@@ -1,0 +1,44 @@
+{
+	"name": "@sosraciel-lamda/lam-chain",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"test": "jest",
+		"compile": "powershell scripts/compile",
+		"watch": "powershell scripts/watch",
+		"expand-macro": "powershell scripts/expand-macro",
+		"build": "powershell scripts/pack",
+		"release": "powershell scripts/release"
+	},
+	"repository": "https://github.com/Sosarciel/LaMDA-LaM-Chain.git",
+	"author": "zwa73",
+	"license": "ISC",
+	"description": "ContextGraph orchestration engine and LaMChain tool-call/verification utilities for LaMDA",
+	"files": [
+		"dist"
+	],
+	"dependencies": {
+		"@anush008/tokenizers": "^0.0.0",
+		"@zwa73/js-utils": "^1.0.89",
+		"@zwa73/utils": "^1.0.302",
+		"undici": "^6.24.1"
+	},
+	"peerDependencies": {
+		"pathe": "*"
+	},
+	"peerDependenciesMeta": {
+		"pathe": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0"
+	}
+}

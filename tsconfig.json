@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "strict": true,
+        "target": "ES2022",
+        "module": "node16",
+        "moduleResolution": "node16",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "declaration": true,
+        "paths": {
+            "Constant"                : ["./src/Constant"],
+            "ResponseFormat"          : ["./src/ResponseFormat"],
+            "RequestFormat"           : ["./src/RequestFormat"],
+            "Tokensizer"              : ["./src/Tokensizer"],
+            "LaMChain"                : ["./src/LaMChain"],
+            "Interactor"              : ["./src/Interactor"],
+            "Interactor/*"            : ["./src/Interactor/*"],
+            "@/src/*"                 : ["./src/*"],
+            "@/*"                     : ["./*"],
+            "@"                       : ["./src/index"]
+        }
+    },
+    "include": ["./src/**/*.ts", "./src/**/*.js", "./jest/**/*.ts"],
+    "exclude": ["./node_modules/**/*"]
+}
