@@ -213,7 +213,7 @@ export const blockProcessorTable = {
         }
 
         // 递归求解子图并计算消耗
-        const context = await subGraphInstance.build();
+        const context = await subGraphInstance.buildOrThrow();
         const contextLength = await calcContextLength(context, computeLength);
         const contextCount = context.length;
 
@@ -349,8 +349,9 @@ export class ContextGraph<Context = ContextSchema> {
 
     /** 执行上下文图谱编排
      * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
+     * @throws 编排失败时抛出错误
      */
-    async build(): Promise<Context[]> {
+    async buildOrThrow(): Promise<Context[]> {
         // 1. 记录原始索引，确保最终输出物理位置不随优先级排序改变
         const indexedBlockList = this._blockList.map((block, originalIndex) => ({ block, originalIndex }));
 
@@ -454,6 +455,17 @@ export class ContextGraph<Context = ContextSchema> {
 
         // 4. 恢复初始传入的物理顺序平铺输出
         return resultsByOriginalIndex.flat().filter((ctx): ctx is Context => ctx != undefined);
+    }
+    /** 执行上下文图谱编排
+     * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
+     */
+    async build(): Promise<Context[]|undefined> {
+        try {
+            return await this.buildOrThrow();
+        } catch (e) {
+            SLogger.warn(`[ContextGraph] 编排上下文失败: ${e}`);
+            return undefined;
+        }
     }
 }
 
