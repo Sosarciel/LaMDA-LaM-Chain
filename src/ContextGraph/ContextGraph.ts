@@ -272,7 +272,7 @@ export class ContextGraph<Context = ContextSchema> {
      * @returns this 支持链式调用
      * @throws 未找到目标区块时抛出错误
      */
-    addBlock(opt:{
+    insertBlock(opt:{
         /** 目标参考区块的 id */
         targetId: string;
         /**插入相对位置：'before' (前) 或 'after' (后)  */
@@ -340,12 +340,10 @@ export class ContextGraph<Context = ContextSchema> {
     private static async proc<Context = ContextSchema, T extends ContextGraphBlock<Context> = ContextGraphBlock<Context>>(
         block: T,
         procCtx: BlockProcessContext<Context>
-    ): Promise<BlockProcessResult<Context> | undefined> {
+    ): Promise<BlockProcessResult<Context>> {
         const handler = blockProcessorTable[block.type as keyof BlockProcessorTable];
-        if (handler == undefined) {
-            SLogger.error(`ContextGraph.proc 未知区块类型: ${block.type} (id: ${block.id})`);
-            return undefined;
-        }
+        if (handler == undefined)
+            throwError(`ContextGraph.proc 未知区块类型: ${block.type} (id: ${block.id})`);
         return handler(block as never, procCtx);
     }
 
@@ -411,8 +409,6 @@ export class ContextGraph<Context = ContextSchema> {
                 availableBudget,
                 computeLength: this.computeLength,
             });
-
-            if (res == undefined) continue;
 
             const { context, contextLength, contextCount } = res;
 
