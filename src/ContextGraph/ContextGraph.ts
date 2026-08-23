@@ -1,232 +1,7 @@
 import { SLogger, throwError } from "@zwa73/utils";
 import type { DeepReadonly, MPromise } from "@zwa73/utils";
-
-/** 声明扩展注册接口：调用方可通过 declare module 全局扩展此接口指定默认 Context 类型 */
-export interface ContextSchema { };
-
-/** 标准化上下文预算结构 */
-export type ContextBudget = {
-    /** 最大 Token 长度预算 */
-    maxLength: number;
-    /** 最大消息条数预算 */
-    maxCount: number;
-};
-
-/** 块处理算子计算输出的增强结论 */
-export type BlockProcessResult<Context = ContextSchema> = {
-    /** 最终生成的 Context[] 消息列表 */
-    context: Context[];
-    /** 区块计算得出的 Token 消耗数 */
-    contextLength: number;
-    /** 区块包含的消息条数 */
-    contextCount: number;
-};
-
-/** 传递给区块处理器的环境上下文 */
-export type BlockProcessContext<Context = ContextSchema> = {
-    /** 当前区块可用的总预算 */
-    availableBudget: ContextBudget;
-    /** 单条 Context 单元的 Token 长度计算函数 */
-    computeLength: (msg: Context) => MPromise<number>;
-};
-
-/** 计算 Context[] 消息列表总 Token 长度的辅助函数 */
-export const calcContextLength = <Context = ContextSchema>(
-    ctx: Context[],
-    computeLength: (msg: Context) => MPromise<number>
-): MPromise<number> => {
-    return Promise.all(ctx.map(computeLength)).then(lens => lens.reduce((a, b) => a + b, 0));
-};
-
-/** 上下文块基础属性 */
-export type ContextBlockBase<T> = {
-    /** 区块唯一标识 */
-    id: string;
-    /** 优先级：数值越大优先级越高，优先抢占 Token 预算 */
-    priority: number;
-    /** 是否可抛弃，默认 false。若预算不足且为 false 则中断抛错 */
-    droppable?: boolean;
-    /** 是否忽略长度限制，默认 false。若为 true 则该块可用长度视为无限 */
-    ignoreLength?: boolean;
-    /** 是否忽略消息条数限制，默认 false。若为 true 则该块可用条数视为无限 */
-    ignoreCount?: boolean;
-    /** 块的独立保证保底预算 (即使全局预算为 0，也会顶开获得至少此配额) */
-    minBudget?: Partial<ContextBudget>;
-    /** 块级别的最大预算上限约束 */
-    maxBudget?: Partial<ContextBudget>;
-    /** 是否打印处理日志与截断报告，默认 true */
-    verbose?: boolean;
-    /** 区块类型标识 */
-    type: string;
-} & T;
-
-/** 常量/基础块：静态 Context[] 列表或无参求值函数 */
-export type ConstantBlock<Context = ContextSchema> = ContextBlockBase<{
-    type: 'constant';
-    context: Context[] | (() => MPromise<Context[]>);
-}>;
-
-/** 预算块：接收计算出的可用预算，返回 Context[] 或自定义 BlockProcessResult */
-export type BudgetBlock<Context = ContextSchema> = ContextBlockBase<{
-    type: 'budget';
-    context: (availableBudget: ContextBudget) => MPromise<Context[] | { context: Context[]; contextLength?: number }>;
-}>;
-
-/** 托管滑窗块：通过 Context 流生成器拉取历史，由块处理器统一做预算截断与拦截 */
-export type WindowBlock<Context = ContextSchema> = ContextBlockBase<{
-    type: 'window';
-    /** 历史 Context 消息流生成器或返回生成器的函数 */
-    stream: AsyncIterable<Context> | ((availableBudget: ContextBudget) => AsyncIterable<Context>);
-    /** 自定义拦截器：返回 'continue' 继续、'reject' 截断且不计入、'include' 截断但计入 */
-    onIntercept?: (msg: Context) => MPromise<'continue' | 'reject' | 'include'>;
-}>;
-
-/** 子图块：将一个 ContextGraph 实例或其配置嵌套入母图 */
-export type GraphBlock<Context = ContextSchema> = ContextBlockBase<{
-    type: 'graph';
-    /** 嵌套的子图实例，或接收当前可用预算返回子图实例/配置的函数 */
-    graph:
-        | ContextGraph<Context>
-        | ((availableBudget: ContextBudget) => MPromise<ContextGraph<Context> | ContextGraphOption<Context>>);
-}>;
-
-/** 框架支持的基础上下文区块联合类型 */
-export type ContextGraphBlock<Context = ContextSchema> =
-    | ConstantBlock<Context>
-    | BudgetBlock<Context>
-    | WindowBlock<Context>
-    | GraphBlock<Context>;
-
-/** 独立的块处理器表 (as const 表驱动设计)  */
-export const blockProcessorTable = {
-    /** 常量块处理器 */
-    constant: async <Context = ContextSchema>(block: ConstantBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
-        const { id, verbose = true } = block;
-        const ctx = typeof block.context === 'function' ? await block.context() : block.context;
-        const contextLength = await calcContextLength(ctx, procCtx.computeLength);
-        const contextCount = ctx.length;
-
-        if (verbose) {
-            SLogger.info(`[ContextGraph:constant] id:${id} 求值完成 contextCount:${contextCount} contextLength:${contextLength}`);
-        }
-
-        return { context: ctx, contextLength, contextCount };
-    },
-
-    /** 预算块处理器 */
-    budget: async <Context = ContextSchema>(block: BudgetBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
-        const { id, verbose = true } = block;
-        const res = await block.context(procCtx.availableBudget);
-
-        const context = Array.isArray(res) ? res : res.context;
-        const contextLength = Array.isArray(res) || res.contextLength == undefined
-            ? await calcContextLength(context, procCtx.computeLength)
-            : res.contextLength;
-        const contextCount = context.length;
-
-        if (verbose) {
-            SLogger.info(`[ContextGraph:budget] id:${id} 求值完成 contextCount:${contextCount} contextLength:${contextLength}`);
-        }
-
-        return { context, contextLength, contextCount };
-    },
-
-    /** 托管滑窗块处理器：统一进行 Token/条数上限校验与拦截器判断 */
-    window: async <Context = ContextSchema>(block: WindowBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
-        const { stream, onIntercept, verbose = true, id } = block;
-        const { availableBudget, computeLength } = procCtx;
-
-        const maxLength = availableBudget.maxLength;
-        const maxCount = availableBudget.maxCount;
-
-        const chain: Context[] = [];
-        let totalLength = 0;
-        let totalCount = 0;
-
-        const iterable = typeof stream === 'function' ? stream(availableBudget) : stream;
-
-        for await (const msg of iterable) {
-            const messageLength = await computeLength(msg);
-            const wouldBeLength = totalLength + messageLength;
-            const wouldBeCount = totalCount + 1;
-
-            // 校验消息条数超限
-            if (wouldBeCount > maxCount) {
-                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 消息条数超限 最大允许条数:${maxCount}`);
-                break;
-            }
-
-            // 校验 Token 长度超限
-            if (wouldBeLength > maxLength) {
-                if (verbose) SLogger.info(`[ContextGraph:window] id:${id} Token 长度超限 单消息长度:${messageLength} 总长度:${totalLength} 最大允许长度:${maxLength}`);
-                break;
-            }
-
-            // 执行拦截器回调
-            if (onIntercept != undefined) {
-                const interceptRes = await onIntercept(msg);
-                if (interceptRes === 'reject') {
-                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(不计入)`);
-                    break;
-                }
-                if (interceptRes === 'include') {
-                    chain.unshift(msg);
-                    totalLength = wouldBeLength;
-                    totalCount = wouldBeCount;
-                    if (verbose) SLogger.info(`[ContextGraph:window] id:${id} onIntercept 截断(计入) 链接第 ${totalCount} 条 单消息长度:${messageLength} 总长度:${totalLength}`);
-                    break;
-                }
-            }
-
-            chain.unshift(msg);
-            totalLength = wouldBeLength;
-            totalCount = wouldBeCount;
-            if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 链接第 ${totalCount} 条 单消息长度:${messageLength} 总长度:${totalLength}`);
-        }
-        if (verbose) SLogger.info(`[ContextGraph:window] id:${id} 链接完成 contextCount:${totalCount} contextLength:${totalLength}`);
-
-        return {
-            context: chain,
-            contextLength: totalLength,
-            contextCount : totalCount,
-        };
-    },
-
-    /** 子图块处理器：求值嵌套子图并归集 Token 消耗 */
-    graph: async <Context = ContextSchema>(block: GraphBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
-        const { id, verbose = true } = block;
-        const { availableBudget, computeLength } = procCtx;
-
-        // 获取子图配置：若为函数则传入当前可用预算动态计算
-        const rawGraph = typeof block.graph === 'function' ? await block.graph(availableBudget) : block.graph;
-
-        // 统一构建/提取子图实例
-        let subGraphInstance: ContextGraph<Context>;
-        if (rawGraph instanceof ContextGraph) {
-            subGraphInstance = rawGraph;
-        } else {
-            subGraphInstance = new ContextGraph<Context>({
-                ...rawGraph,
-                maxBudget: availableBudget,
-                computeLength,
-            });
-        }
-
-        // 递归求解子图并计算消耗
-        const context = await subGraphInstance.buildOrThrow();
-        const contextLength = await calcContextLength(context, computeLength);
-        const contextCount = context.length;
-
-        if (verbose) {
-            SLogger.info(`[ContextGraph:graph] id:${id} 子图编排完成 contextCount:${contextCount} contextLength:${contextLength}`);
-        }
-
-        return { context, contextLength, contextCount };
-    },
-} as const;
-
-/** 处理器表映射类型定义 */
-export type BlockProcessorTable = typeof blockProcessorTable;
+import { BlockProcessContext, BlockProcessResult, ContextBudget, ContextGraphBlock, ContextSchema } from "./Interface";
+import { BlockProcessorTable } from "./ProcessorTable";
 
 /** ContextGraph 构造函数配置选项 (单参形式)  */
 export type ContextGraphOption<Context = ContextSchema> = {
@@ -238,6 +13,16 @@ export type ContextGraphOption<Context = ContextSchema> = {
     computeLength?: (msg: Context) => MPromise<number>;
     /** 是否打印全局编排报告，默认 true */
     verbose?: boolean;
+};
+
+/** 上下文图谱编排完整结果 */
+export type ContextGraphResult<Context = ContextSchema> = {
+    /** 最终生成的 Context[] 消息列表 */
+    context: Context[];
+    /** 图谱实际消耗的 Token 长度（已排除内部 ignoreLength 的块） */
+    contextLength: number;
+    /** 图谱实际消耗的消息条数（已排除内部 ignoreCount 的块） */
+    contextCount: number;
 };
 
 /** 上下文图谱编排器 */
@@ -292,7 +77,7 @@ export class ContextGraph<Context = ContextSchema> {
         return this;
     }
 
-    /** 头部插入 (作为新的第一个区块) 
+    /** 头部插入 (作为新的第一个区块)
      * @param block - 要插入的区块或区块数组
      * @returns this 支持链式调用
      */
@@ -301,7 +86,7 @@ export class ContextGraph<Context = ContextSchema> {
         return this;
     }
 
-    /** 尾部追加 (作为新的最后一个区块) 
+    /** 尾部追加 (作为新的最后一个区块)
      * @param block - 要追加的区块或区块数组
      * @returns this 支持链式调用
      */
@@ -312,7 +97,7 @@ export class ContextGraph<Context = ContextSchema> {
 
     /** 替换或删除指定 id 的区块
      * @param targetId - 目标区块 id
-     * @param newBlock - 新区块、区块数组或 undefined (传入 undefined 或留空时删除该区块) 
+     * @param newBlock - 新区块、区块数组或 undefined (传入 undefined 或留空时删除该区块)
      * @returns this 支持链式调用
      * @throws 未找到目标区块时抛出错误
      */
@@ -337,21 +122,21 @@ export class ContextGraph<Context = ContextSchema> {
      * @param block - 上下文区块
      * @param procCtx - 处理环境上下文
      */
-    private static async proc<Context = ContextSchema, T extends ContextGraphBlock<Context> = ContextGraphBlock<Context>>(
+    private static async process<Context = ContextSchema, T extends ContextGraphBlock<Context> = ContextGraphBlock<Context>>(
         block: T,
         procCtx: BlockProcessContext<Context>
     ): Promise<BlockProcessResult<Context>> {
-        const handler = blockProcessorTable[block.type as keyof BlockProcessorTable];
+        const handler = BlockProcessorTable[block.type as keyof BlockProcessorTable];
         if (handler == undefined)
             throwError(`ContextGraph.proc 未知区块类型: ${block.type} (id: ${block.id})`);
         return handler(block as never, procCtx);
     }
 
-    /** 执行上下文图谱编排
+    /** 执行上下文图谱编排并返回完整度量结论
      * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
-     * @throws 编排失败时抛出错误
+     * @throws 编排超限或失败时抛出错误
      */
-    async buildOrThrow(): Promise<Context[]> {
+    async orchestrate(): Promise<ContextGraphResult<Context>> {
         // 1. 记录原始索引，确保最终输出物理位置不随优先级排序改变
         const indexedBlockList = this._blockList.map((block, originalIndex) => ({ block, originalIndex }));
 
@@ -364,6 +149,10 @@ export class ContextGraph<Context = ContextSchema> {
 
         const remainingGlobalBudget: ContextBudget = { ...this.maxBudget };
         const resultsByOriginalIndex: (Context[] | undefined)[] = new Array(this._blockList.length);
+
+        // 记录本图实际产生的有效预算消耗
+        let consumedLength = 0;
+        let consumedCount = 0;
 
         if (this.verbose) {
             SLogger.info(
@@ -406,7 +195,7 @@ export class ContextGraph<Context = ContextSchema> {
             };
 
             // 表驱动处理
-            const res = await ContextGraph.proc(block, {
+            const res = await ContextGraph.process(block, {
                 availableBudget,
                 computeLength: this.computeLength,
             });
@@ -435,11 +224,15 @@ export class ContextGraph<Context = ContextSchema> {
                 }
             }
 
-            // 仅在未忽略时，才扣减全局剩余预算
-            if (!ignoreLength)
+            // 仅在未忽略时扣减剩余预算，并累加到本图的有效消耗中
+            if (!ignoreLength) {
                 remainingGlobalBudget.maxLength -= contextLength;
-            if (!ignoreCount)
+                consumedLength += contextLength;
+            }
+            if (!ignoreCount) {
                 remainingGlobalBudget.maxCount -= contextCount;
+                consumedCount += contextCount;
+            }
 
             resultsByOriginalIndex[originalIndex] = context;
 
@@ -454,12 +247,27 @@ export class ContextGraph<Context = ContextSchema> {
         }
 
         // 4. 恢复初始传入的物理顺序平铺输出
-        return resultsByOriginalIndex.flat().filter((ctx): ctx is Context => ctx != undefined);
+        return {
+            context: resultsByOriginalIndex.flat().filter((ctx): ctx is Context => ctx != undefined),
+            contextLength: consumedLength,
+            contextCount: consumedCount,
+        };
     }
-    /** 执行上下文图谱编排
+
+    /** 构建编排结果
+     * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
+     * @throws 编排超限或失败时抛出错误
+     */
+    async buildOrThrow(): Promise<Context[]> {
+        const res = await this.orchestrate();
+        return res.context;
+    }
+
+    /** 构建编排结果
+     * 吞掉错误返回 undefined
      * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
      */
-    async build(): Promise<Context[]|undefined> {
+    async build(): Promise<Context[] | undefined> {
         try {
             return await this.buildOrThrow();
         } catch (e) {
