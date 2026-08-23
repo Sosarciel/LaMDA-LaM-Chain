@@ -55,13 +55,15 @@ export type ContextBlockBase<T> = {
 /** 常量/基础块：静态 Context[] 列表或无参求值函数 */
 export type ConstantBlock<Context = ContextSchema> = ContextBlockBase<{
     type: 'constant';
+    /** 静态 Context[] 列表或无参求值函数 */
     context: Context[] | (() => MPromise<Context[]>);
 }>;
 
 /** 预算块：接收计算出的可用预算，返回 Context[] 或自定义 BlockProcessResult */
 export type BudgetBlock<Context = ContextSchema> = ContextBlockBase<{
     type: 'budget';
-    context: (availableBudget: ContextBudget) => MPromise<Context[] | { context: Context[]; contextLength?: number }>;
+    /** 预算块处理器 */
+    context: (availableBudget: ContextBudget) => MPromise<Context[] | Partial<Omit<BlockProcessResult<Context>,'context'>>&Pick<BlockProcessResult<Context>,'context'>>;
 }>;
 
 /** 托管滑窗块：通过 Context 流生成器拉取历史，由块处理器统一做预算截断与拦截 */
@@ -77,9 +79,12 @@ export type WindowBlock<Context = ContextSchema> = ContextBlockBase<{
 export type GraphBlock<Context = ContextSchema> = ContextBlockBase<{
     type: 'graph';
     /** 嵌套的子图实例，或接收当前可用预算返回子图实例/配置的函数 */
-    graph:
-        | ContextGraph<Context>
-        | ((availableBudget: ContextBudget) => MPromise<ContextGraph<Context> | ContextGraphOption<Context>>);
+    graph: ContextGraph<Context> | ContextGraphOption<Context>;
+    /** 是否作为常量静态图求值，默认 false。
+     * - true: 使用子图自身的固有预算求值，不注入母图动态预算（超出母图剩余时由母图裁决 droppable）
+     * - false: 自动注入母图当前剩余的 availableBudget 执行动态编排
+     */
+    constant?: boolean;
 }>;
 
 /** 框架支持的基础上下文区块联合类型 */

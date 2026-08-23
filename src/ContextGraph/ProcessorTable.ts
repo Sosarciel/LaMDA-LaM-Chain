@@ -36,10 +36,12 @@ export const BlockProcessorTable = {
         const res = await block.context(procCtx.availableBudget);
 
         const context = Array.isArray(res) ? res : res.context;
-        const contextLength = Array.isArray(res) || res.contextLength == undefined
+        const contextLength = (Array.isArray(res) || res.contextLength == undefined)
             ? await calcContextLength(context, procCtx.computeLength)
             : res.contextLength;
-        const contextCount = context.length;
+        const contextCount = (Array.isArray(res) || res.contextCount == undefined)
+            ? context.length
+            : res.contextCount;
 
         if (verbose) {
             SLogger.info(
@@ -113,30 +115,27 @@ export const BlockProcessorTable = {
 
     /** 子图块处理器：求值嵌套子图并归集消耗 */
     graph: async <Context = ContextSchema>(block: GraphBlock<Context>, procCtx: BlockProcessContext<Context>): Promise<BlockProcessResult<Context>> => {
-        const { id, verbose = true } = block;
+        const { id, graph, constant = false, verbose = true } = block;
         const { availableBudget, computeLength } = procCtx;
 
-        // 获取子图配置：若为函数则传入当前可用预算动态计算
-        const rawGraph = typeof block.graph === 'function' ? await block.graph(availableBudget) : block.graph;
-
         // 统一构建/提取子图实例
-        let subGraphInstance: ContextGraph<Context>;
-        if (rawGraph instanceof ContextGraph) {
-            subGraphInstance = rawGraph;
-        } else {
-            subGraphInstance = new ContextGraph<Context>({
-                ...rawGraph,
+        const subGraphInstance = graph instanceof ContextGraph
+            ? graph
+            : new ContextGraph<Context>({
+                ...graph,
                 maxBudget: availableBudget,
                 computeLength,
             });
-        }
 
-        // 直接获取子图的计算结果（内部已排除其子图内部 ignore 的消耗）
-        const res = await subGraphInstance.orchestrate();
+        // 静态图使用自身固有预算，动态图注入母图当前可用预算
+        const res = constant
+            ? await subGraphInstance.orchestrate({ verbose })
+            : await subGraphInstance.orchestrate({ verbose, maxBudget: availableBudget });
 
         if (verbose) {
             SLogger.info(
-                `[ContextGraph:graph] id:${id} 子图编排完成 contextCount:${res.contextCount} contextLength:${res.contextLength}`
+                `[ContextGraph:graph] id:${id} 子图编排完成 (${constant ? '常量静态图' : '动态预算图'}) ` +
+                `contextCount:${res.contextCount} contextLength:${res.contextLength}`
             );
         }
 

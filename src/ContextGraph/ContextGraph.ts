@@ -3,7 +3,7 @@ import type { DeepReadonly, MPromise } from "@zwa73/utils";
 import { BlockProcessContext, BlockProcessResult, ContextBudget, ContextGraphBlock, ContextSchema } from "./Interface";
 import { BlockProcessorTable } from "./ProcessorTable";
 
-/** ContextGraph 构造函数配置选项 (单参形式)  */
+/** ContextGraph 构造函数配置选项 */
 export type ContextGraphOption<Context = ContextSchema> = {
     /** 上下文区块列表 (物理拼接排版顺序以传入此数组的顺序为准)  */
     blockList: ContextGraphBlock<Context>[];
@@ -24,6 +24,16 @@ export type ContextGraphResult<Context = ContextSchema> = {
     /** 图谱实际消耗的消息条数（已排除内部 ignoreCount 的块） */
     contextCount: number;
 };
+
+/**上下文图谱编排参数
+ * 作为图设定的覆盖全部为可缺省, 可自动回退至图设定
+ */
+export type OrchestrateOption = Partial<{
+    /** 本次编排所用的全局预算上限缺失则使用图设定 */
+    maxBudget: Partial<ContextBudget>;
+    /** 是否打印全局编排报告，默认 true */
+    verbose: boolean;
+}>;
 
 /** 上下文图谱编排器 */
 export class ContextGraph<Context = ContextSchema> {
@@ -136,7 +146,7 @@ export class ContextGraph<Context = ContextSchema> {
      * @returns 组装好的完整 Context[] 数组 (保持构造时传入的物理顺序)
      * @throws 编排超限或失败时抛出错误
      */
-    async orchestrate(): Promise<ContextGraphResult<Context>> {
+    async orchestrate(param?:OrchestrateOption): Promise<ContextGraphResult<Context>> {
         // 1. 记录原始索引，确保最终输出物理位置不随优先级排序改变
         const indexedBlockList = this._blockList.map((block, originalIndex) => ({ block, originalIndex }));
 
@@ -147,14 +157,18 @@ export class ContextGraph<Context = ContextSchema> {
             return a.originalIndex - b.originalIndex;
         });
 
-        const remainingGlobalBudget: ContextBudget = { ...this.maxBudget };
+        const fixedVerbose = param?.verbose ?? this.verbose;
+        const remainingGlobalBudget: ContextBudget = {
+            maxLength: param?.maxBudget?.maxLength ?? this.maxBudget.maxLength,
+            maxCount: param?.maxBudget?.maxCount ?? this.maxBudget.maxCount,
+        };
         const resultsByOriginalIndex: (Context[] | undefined)[] = new Array(this._blockList.length);
 
         // 记录本图实际产生的有效预算消耗
         let consumedLength = 0;
         let consumedCount = 0;
 
-        if (this.verbose) {
+        if (fixedVerbose) {
             SLogger.info(
                 `[ContextGraph] 开始编排上下文 总预算 maxLength:${this.maxBudget.maxLength}, maxCount:${this.maxBudget.maxCount}, 区块总数:${this._blockList.length}`
             );
@@ -163,7 +177,7 @@ export class ContextGraph<Context = ContextSchema> {
         // 3. 按优先级求值与分配预算
         for (const { block, originalIndex } of sortedByPriority) {
             const droppable = block.droppable ?? false;
-            const blockVerbose = block.verbose ?? this.verbose;
+            const blockVerbose = block.verbose ?? fixedVerbose;
             const ignoreLength = block.ignoreLength ?? false;
             const ignoreCount = block.ignoreCount ?? false;
 
