@@ -1,6 +1,7 @@
 import type { DeepseekModelID } from "RequestFormat";
 
 import type { OpenAILogprobToken } from "./OpenAIChat";
+import type { OpenAITextChoice, OpenAITextResponse } from "./OpenAIText";
 
 
 /** Deepseek 响应格式 */
@@ -83,6 +84,43 @@ export type TimeoutLimit = {
     }
 }
 export type DeepseekErrorResponse = TimeoutLimit;
+
+//https://api-docs.deepseek.com/zh-cn/api/create-completion
+/** Deepseek FIM 补全选项 基于 OpenAI TextChoice
+ * logprobs 平行数组结构与 OpenAI 相等 直接复用 finish_reason 扩展 insufficient_system_resource
+ */
+export type DeepseekTextChoice=OpenAITextChoice&{
+    /** 完成原因 */
+    finish_reason:"stop"|"length"|"content_filter"|"insufficient_system_resource";
+};
+
+/** Deepseek FIM 响应格式 基于 OpenAITextResponse 局部重定义
+ * @see doc/Deepseek/create-completion.md
+ * usage 扩展 prompt_cache_hit_tokens/prompt_cache_miss_tokens (Deepseek 特有)
+ */
+export type DeepseekTextResponse=Omit<OpenAITextResponse,"id"|"choices"|"usage"|"system_fingerprint">&{
+    /** 响应 ID */
+    id:string;
+    /** 选项列表 */
+    choices:DeepseekTextChoice[];
+    /** 用量统计 */
+    usage:{
+        /** 完成 token 数量 */
+        completion_tokens:number;
+        /** 提示 token 数量 (= prompt_cache_hit_tokens + prompt_cache_miss_tokens) */
+        prompt_tokens:number;
+        /** 缓存命中的提示 token 数量 */
+        prompt_cache_hit_tokens:number;
+        /** 缓存未命中的提示 token 数量 */
+        prompt_cache_miss_tokens:number;
+        /** 总 token 数量 */
+        total_tokens:number;
+        /** 完成 token 详情 */
+        completion_tokens_details?:{reasoning_tokens?:number};
+    };
+    /** 系统指纹 */
+    system_fingerprint?:string;
+};
 
 export const DeepseekResponseExample = {
     id: "456a034b-6e31-4a4d-9548-e87b5d694ae0",

@@ -1,15 +1,16 @@
 import type { OpenAIChatAPIEntry, OpenAIChatAssistantEntry, OpenAITool, OpenAIToolChoice } from "./OpenAIChat";
 import { OpenAIChatAPIRole } from "./OpenAIChat";
+import type { OpenAITextRequest } from "./OpenAIText";
 
 
 //https://api-docs.deepseek.com/zh-cn/api/create-chat-completion
 /** Deepseek 模型 ID
- * @see doc/Deepseek/chat-completion-api.zh-cn.md
+ * @see doc/Deepseek/chat-completion-api.md
  */
 export type DeepseekModelID = "deepseek-v4-flash"|"deepseek-v4-pro"|"deepseek-v4-flash-vision-exp";
 
 /** Deepseek 响应输出格式配置 仅支持 text/json_object 不支持 OpenAI 的 json_schema
- * @see doc/Deepseek/guide-json_mode.zh-cn.md
+ * @see doc/Deepseek/guide-json_mode.md
  */
 export type DeepseekResponseFormat={
     type:"text";
@@ -25,7 +26,7 @@ export type DeepseekStreamOptions={
 };
 
 /** Deepseek 思考模式控制
- * @see doc/Deepseek/guide-thinking_mode.zh-cn.md
+ * @see doc/Deepseek/guide-thinking_mode.md
  */
 export type DeepseekThinking={
     /** 是否开启思考 默认 enabled */
@@ -66,7 +67,7 @@ export type DeepseekRequest={
     /** 思考模式控制 */
     thinking?:DeepseekThinking;
     /** 响应输出格式 仅支持 text/json_object
-     * @see doc/Deepseek/guide-json_mode.zh-cn.md
+     * @see doc/Deepseek/guide-json_mode.md
      */
     response_format?: DeepseekResponseFormat;
     /** 是否以 SSE 流式返回增量 以 data: [DONE] 结尾 */
@@ -86,7 +87,7 @@ export type DeepseekRequest={
 };
 
 /** Deepseek assistant 消息条目 扩展 prefix 与 reasoning_content
- * @see doc/Deepseek/guide-chat_prefix_completion.zh-cn.md
+ * @see doc/Deepseek/guide-chat_prefix_completion.md
  */
 export type DeepseekAssistantEntry=OpenAIChatAssistantEntry&{
     /** (Beta) 强制模型以此 assistant 消息中的前缀内容开始回答 需 base_url=https://api.deepseek.com/beta */
@@ -101,6 +102,19 @@ export type DeepseekAssistantEntry=OpenAIChatAssistantEntry&{
 export type DeepseekAPIEntry=
     Exclude<OpenAIChatAPIEntry,OpenAIChatAssistantEntry>
     |DeepseekAssistantEntry;
+
+//https://api-docs.deepseek.com/zh-cn/api/create-completion
+/** Deepseek FIM 补全请求格式
+ * OpenAITextRequest 的子集 缺失字段直接复用 OpenAI 定义 不支持 best_of/n/logit_bias/seed/user
+ * @see doc/Deepseek/create-completion.md
+ * 需 base_url=https://api.deepseek.com/beta
+ */
+export type DeepseekTextRequest=Omit<OpenAITextRequest,
+    "model"|"n"|"best_of"|"logit_bias"|"seed"|"user"
+>&{
+    /** 模型名称 FIM 仅支持 deepseek-v4-pro */
+    model:DeepseekModelID|string;
+};
 
 export const DeepseekAPIRole = OpenAIChatAPIRole;
 export type DeepseekAPIRole = OpenAIChatAPIRole;

@@ -4,7 +4,7 @@ import { OpenAIChatAPIRole } from "./OpenAIChat";
 
 //https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%AF%B9%E8%AF%9D%E8%A1%A5%E5%85%A8.md
 /** GLM 模型 ID
- * @see doc/Zhipu/chat-completion-api.zh-cn.md
+ * @see doc/Zhipu/chat-completion-api.md
  */
 export type GLMModelID = "glm-5.3"|"glm-5.2"|"glm-5.1"|"glm-5-turbo"|"glm-5"|"glm-4.7"|
     "glm-4.7-flash"|"glm-4.7-flashx"|"glm-4.6"|"glm-4.5-air"|"glm-4.5-airx"|"glm-4.5-flash"|
@@ -32,7 +32,7 @@ export type GLMThinking={
 };
 
 /** GLM 响应输出格式配置 仅文本模型支持 不支持 OpenAI 的 json_schema
- * @see doc/Zhipu/guide-struct-output.zh-cn.md
+ * @see doc/Zhipu/guide-struct-output.md
  */
 export type GLMResponseFormat={
     type:"text";
