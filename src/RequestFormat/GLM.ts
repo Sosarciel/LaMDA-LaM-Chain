@@ -1,4 +1,6 @@
-import type { OpenAIChatAPIEntry, OpenAITool, OpenAIReasoningEffort } from "./OpenAIChat";
+﻿import type { JObject } from "@zwa73/utils";
+
+import type { OpenAIChatAPIEntry, OpenAIReasoningEffort } from "./OpenAIChat";
 import { OpenAIChatAPIRole } from "./OpenAIChat";
 
 
@@ -41,6 +43,23 @@ export type GLMResponseFormat={
     type:"json_object";
 };
 
+/** GLM function 工具声明 基于 OpenAITool 局部重定义
+ * 差异: GLM 的 description/parameters 为 required 且不支持 OpenAI 的 strict 字段
+ */
+export type GLMFunctionTool={
+    /** 工具类型 */
+    type:"function";
+    /** 函数定义 */
+    function:{
+        /** 函数名称 a-z A-Z 0-9 _ - 最大64字符 pattern ^[a-zA-Z0-9_-]+$ */
+        name:string;
+        /** 函数功能描述 (GLM 必填) */
+        description:string;
+        /** JSON Schema 参数描述 (GLM 必填) 无参数时传空对象 */
+        parameters:JObject;
+    };
+};
+
 /** GLM 模型请求格式 */
 export type GLMRequest={
     /** 模型名称 */
@@ -70,7 +89,7 @@ export type GLMRequest={
     /** 可供模型调用的工具列表 最多 128 个 function
      * 另原生支持 retrieval/web_search/mcp 工具类型 此处暂仅定义 function
      */
-    tools?: OpenAITool[];
+    tools?: GLMFunctionTool[];
     /** 工具调用控制 仅支持 auto */
     tool_choice?: "auto";
     /** 请求唯一标识符 6~64 字符 建议 UUID 未提供时平台自动生成 */
@@ -79,7 +98,9 @@ export type GLMRequest={
     user_id?: string;
 };
 
-/** GLM API 消息条目 */
+/** GLM API 消息条目 基于 OpenAIChatAPIEntry
+ * 差异: assistant.tool_calls[].type 原生还支持 web_search/retrieval (此处未声明 仅 function)
+ */
 export type GLMAPIEntry=OpenAIChatAPIEntry;
 
 export const GLMAPIRole = OpenAIChatAPIRole;

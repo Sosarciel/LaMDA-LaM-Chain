@@ -1,7 +1,7 @@
 import type { JToken, MPromise, PromiseRetryResult } from "@zwa73/js-utils";
 import { memoize, SLogger, UtilFunc } from "@zwa73/utils";
 
-import type { AnyOpenAILikeRequest, OpenAITool } from "RequestFormat";
+import type { AnyOpenAILikeRequest, GLMFunctionTool, OpenAITool } from "RequestFormat";
 import type { AnyGeminiResponse, AnyOpenAIChatLikeResponse, AnyOpenAIResponse } from "ResponseFormat";
 import type { TokensizerType } from "Tokensizer";
 import { getTokensizer } from "Tokensizer";
@@ -67,17 +67,20 @@ export const stripUndefined = <T extends JToken>(value: T): T => {
     return value;
 };
 
-/** 从 Provider 提取 OpenAI tools 请求参数 */
+/** 从 Provider 提取 OpenAI tools 请求参数
+ * description 兜底空串 保证产物同时满足 OpenAITool 与 GLMFunctionTool
+ * (GLM 要求 description 必填 缺失时发送会报错)
+ */
 export const toOpenAITools = (tool: ToolProvider) => {
     return tool.tools.map(t => ({
         type: "function" as const,
         function: {
             name: t.name,
-            description: t.description,
+            description: t.description ?? "",
             parameters: t.parameters,
             strict: t.strict,
         },
-    }) satisfies OpenAITool);
+    }) satisfies OpenAITool&GLMFunctionTool);
 };
 
 //#region 计费

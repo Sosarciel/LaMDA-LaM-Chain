@@ -1,3 +1,42 @@
+/** OpenAI 用量统计 (Chat 与 Text Completion 共用)
+ * 核心字段两端点完全相等 details 为 optional 并集
+ * Deepseek 等兼容厂商基于该类型扩展缓存命中字段
+ */
+export type OpenAIUsage={
+    /** 提示 token 数量 */
+    prompt_tokens: number;
+    /** 完成 token 数量 */
+    completion_tokens: number;
+    /** 总 token 数量 */
+    total_tokens: number;
+    /** 提示 token 详情 */
+    prompt_tokens_details?: {
+        /** 缓存 token 数量 */
+        cached_tokens?: number;
+        /** 音频 token 数量 */
+        audio_tokens?: number;
+        /** 图片 token 数量 (Text Completion) */
+        image_tokens?: number;
+        /** 文本输入 token 数量 (Text Completion) */
+        text_tokens?: number;
+        /** 写入缓存的未调整提示 token 数量 (Text Completion) */
+        cache_write_tokens?: number;
+    };
+    /** 完成 token 详情 */
+    completion_tokens_details?: {
+        /** 推理 token 数量 */
+        reasoning_tokens?: number;
+        /** 音频 token 数量 */
+        audio_tokens?: number;
+        /** 接受的预测 token 数量 */
+        accepted_prediction_tokens?: number;
+        /** 拒绝的预测 token 数量 */
+        rejected_prediction_tokens?: number;
+        /** 文本输出 token 数量 (Text Completion) */
+        text_tokens?: number;
+    };
+};
+
 /** OpenAI 聊天 API 回复格式 */
 export type OpenAIChatResponse = {
     /** 响应 ID */
@@ -11,32 +50,7 @@ export type OpenAIChatResponse = {
     /** 系统指纹 */
     system_fingerprint: null|`fp_${string}`;
     /** 用量统计 */
-    usage: {
-        /** 提示 token 数量 */
-        prompt_tokens: number;
-        /** 完成 token 数量 */
-        completion_tokens: number;
-        /** 总 token 数量 */
-        total_tokens: number;
-        /** 提示 token 详情 */
-        prompt_tokens_details?: {
-			/** 缓存 token 数量 */
-			cached_tokens?: number;
-			/** 音频 token 数量 */
-			audio_tokens?: number;
-		},
-		/** 完成 token 详情 */
-		completion_tokens_details?: {
-			/** 推理 token 数量 */
-			reasoning_tokens?: number;
-			/** 音频 token 数量 */
-			audio_tokens?: number;
-			/** 接受的预测 token 数量 */
-			accepted_prediction_tokens?: number;
-			/** 拒绝的预测 token 数量 */
-			rejected_prediction_tokens?: number;
-		}
-    };
+    usage: OpenAIUsage;
     /** 选项列表 */
     choices: ChatChoice[];
 };

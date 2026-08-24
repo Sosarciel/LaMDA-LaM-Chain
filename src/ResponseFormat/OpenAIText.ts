@@ -1,4 +1,5 @@
 //https://developers.openai.com/api/reference/resources/completions/methods/create.md
+import type { OpenAIUsage } from "./OpenAIChat";
 
 /** Text API 对数概率信息 (平行数组结构 与 Chat API 的对象数组结构不同) */
 export type OpenAITextLogprobs={
@@ -26,37 +27,8 @@ export type OpenAITextResponse = {
     system_fingerprint?: string;
     /** 选项列表 */
     choices: OpenAITextChoice[];
-    /** 用量统计 */
-    usage: {
-        /** 提示 token 数量 */
-        prompt_tokens: number;
-        /** 完成 token 数量 */
-        completion_tokens: number;
-        /** 总 token 数量 */
-        total_tokens: number;
-        /** 完成 token 详情 */
-        completion_tokens_details?: {
-            /** 推理 token 数量 */
-            reasoning_tokens?: number;
-            /** 音频 token 数量 */
-            audio_tokens?: number;
-            /** 接受的预测 token 数量 */
-            accepted_prediction_tokens?: number;
-            /** 拒绝的预测 token 数量 */
-            rejected_prediction_tokens?: number;
-            /** 文本输出 token 数量 */
-            text_tokens?: number;
-        };
-        /** 提示 token 详情 */
-        prompt_tokens_details?: {
-            /** 缓存 token 数量 */
-            cached_tokens?: number;
-            /** 音频 token 数量 */
-            audio_tokens?: number;
-            /** 文本输入 token 数量 */
-            text_tokens?: number;
-        };
-    };
+    /** 用量统计 与 Chat API 相等 直接复用 */
+    usage: OpenAIUsage;
 };
 /** 文本 API 选项格式 */
 export type OpenAITextChoice = {

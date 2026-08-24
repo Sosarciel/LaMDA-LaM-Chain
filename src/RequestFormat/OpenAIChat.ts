@@ -70,8 +70,8 @@ export type OpenAIChatRequest={
     temperature?: number;
     /** Top-P 采样参数 */
     top_p?: number;
-    /** 停止序列 */
-    stop?: string[]|null;
+    /** 停止序列 string 或最多 4 个 string 的 list */
+    stop?: string|string[]|null;
     /** 存在惩罚 */
     presence_penalty?: number;
     /** 频率惩罚 */

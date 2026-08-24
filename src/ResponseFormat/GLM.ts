@@ -1,5 +1,12 @@
 import type { GLMModelID } from "RequestFormat";
 
+import type { OpenAIUsage } from "./OpenAIChat";
+
+/** GLM 用量统计 基于 OpenAIUsage 收缩至 GLM 实际返回的字段 */
+export type GLMUsage=Omit<OpenAIUsage,"prompt_tokens_details"|"completion_tokens_details">&{
+    /** 提示 token 详情 仅含命中缓存的 Token 数量 */
+    prompt_tokens_details?:{cached_tokens:number};
+};
 
 /** GLM 响应格式 */
 export type GLMResponse = {
@@ -14,13 +21,7 @@ export type GLMResponse = {
     /** 选项列表 */
     choices: GLMChatChoice[];
     /** 用量统计 */
-    usage: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-        /** 命中缓存的 Token 数量 */
-        prompt_tokens_details?: { cached_tokens: number };
-    };
+    usage: GLMUsage;
     /** 内容安全相关信息 */
     content_filter?: {
         /** 安全生效环节 assistant=模型推理 user=用户输入 history=历史上下文 */

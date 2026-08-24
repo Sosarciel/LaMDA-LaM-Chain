@@ -1,8 +1,28 @@
 import type { DeepseekModelID } from "RequestFormat";
 
 import type { OpenAILogprobToken } from "./OpenAIChat";
-import type { OpenAITextChoice, OpenAITextResponse } from "./OpenAIText";
+import type { OpenAITextChoice } from "./OpenAIText";
 
+
+/** Deepseek 用量统计 基于 OpenAIUsage 收缩至 Deepseek 实际返回的字段并扩展缓存命中
+ * Chat 与 FIM(Text) 两端点的 usage 结构完全相等 共用此类型
+ */
+export type DeepseekUsage={
+    /** 提示 token 数量 */
+    prompt_tokens: number;
+    /** 完成 token 数量 */
+    completion_tokens: number;
+    /** 总 token 数量 */
+    total_tokens: number;
+    /** 缓存命中的提示 token 数量 */
+    prompt_cache_hit_tokens:number;
+    /** 缓存未命中的提示 token 数量 (= prompt_tokens - prompt_cache_hit_tokens) */
+    prompt_cache_miss_tokens:number;
+    /** 提示 token 详情 仅含缓存 token 数量 */
+    prompt_tokens_details?:{cached_tokens:number};
+    /** 完成 token 详情 仅含推理 token 数量 */
+    completion_tokens_details?:{reasoning_tokens?:number};
+};
 
 /** Deepseek 响应格式 */
 export type DeepseekResponse = {
@@ -17,22 +37,7 @@ export type DeepseekResponse = {
     /** 对象类型 */
     object: "chat.completion";
     /** 用量统计 */
-    usage: {
-        /** 完成 token 数量 */
-        completion_tokens: number;
-        /** 提示 token 数量 */
-        prompt_tokens: number;
-        /** 总 token 数量 */
-        total_tokens: number;
-        /** 缓存命中的提示 token 数量 */
-        prompt_cache_hit_tokens: number;
-        /** 缓存未命中的提示 token 数量 */
-        prompt_cache_miss_tokens: number;
-        /** 提示 token 详情 */
-        prompt_tokens_details: { cached_tokens: number };
-        /** 完成 token 详情 */
-        completion_tokens_details?: { reasoning_tokens?: number };
-    };
+    usage: DeepseekUsage;
     /** 系统指纹 */
     system_fingerprint:string;
 };
@@ -94,30 +99,23 @@ export type DeepseekTextChoice=OpenAITextChoice&{
     finish_reason:"stop"|"length"|"content_filter"|"insufficient_system_resource";
 };
 
-/** Deepseek FIM 响应格式 基于 OpenAITextResponse 局部重定义
+/** Deepseek FIM 响应格式
  * @see doc/Deepseek/create-completion.md
- * usage 扩展 prompt_cache_hit_tokens/prompt_cache_miss_tokens (Deepseek 特有)
+ * usage 与 Chat 端点完全相等 直接复用 DeepseekUsage
  */
-export type DeepseekTextResponse=Omit<OpenAITextResponse,"id"|"choices"|"usage"|"system_fingerprint">&{
+export type DeepseekTextResponse={
     /** 响应 ID */
     id:string;
+    /** 对象类型 */
+    object: "text_completion";
+    /** 创建时间戳 */
+    created: number;
+    /** 模型名称 */
+    model: string;
     /** 选项列表 */
     choices:DeepseekTextChoice[];
     /** 用量统计 */
-    usage:{
-        /** 完成 token 数量 */
-        completion_tokens:number;
-        /** 提示 token 数量 (= prompt_cache_hit_tokens + prompt_cache_miss_tokens) */
-        prompt_tokens:number;
-        /** 缓存命中的提示 token 数量 */
-        prompt_cache_hit_tokens:number;
-        /** 缓存未命中的提示 token 数量 */
-        prompt_cache_miss_tokens:number;
-        /** 总 token 数量 */
-        total_tokens:number;
-        /** 完成 token 详情 */
-        completion_tokens_details?:{reasoning_tokens?:number};
-    };
+    usage:DeepseekUsage;
     /** 系统指纹 */
     system_fingerprint?:string;
 };

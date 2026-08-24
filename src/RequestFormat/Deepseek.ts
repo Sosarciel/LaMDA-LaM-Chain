@@ -1,4 +1,4 @@
-import type { OpenAIChatAPIEntry, OpenAIChatAssistantEntry, OpenAITool, OpenAIToolChoice } from "./OpenAIChat";
+﻿import type { OpenAIChatAPIEntry, OpenAIChatAssistantEntry, OpenAITool, OpenAIToolChoice } from "./OpenAIChat";
 import { OpenAIChatAPIRole } from "./OpenAIChat";
 import type { OpenAITextRequest } from "./OpenAIText";
 
@@ -105,15 +105,24 @@ export type DeepseekAPIEntry=
 
 //https://api-docs.deepseek.com/zh-cn/api/create-completion
 /** Deepseek FIM 补全请求格式
- * OpenAITextRequest 的子集 缺失字段直接复用 OpenAI 定义 不支持 best_of/n/logit_bias/seed/user
+ * 基于 OpenAITextRequest Omit 收缩 不支持 n/best_of/logit_bias/seed/user
+ * 差异字段(stop/logprobs/presence_penalty/frequency_penalty)已显式重定义标注
  * @see doc/Deepseek/create-completion.md
  * 需 base_url=https://api.deepseek.com/beta
  */
-export type DeepseekTextRequest=Omit<OpenAITextRequest,
-    "model"|"n"|"best_of"|"logit_bias"|"seed"|"user"
+export type DeepseekTextRequest=Pick<OpenAITextRequest,
+    "prompt"|"suffix"|"max_tokens"|"temperature"|"top_p"|"stream"|"stream_options"|"echo"
 >&{
     /** 模型名称 FIM 仅支持 deepseek-v4-pro */
     model:DeepseekModelID|string;
+    /** 停止序列 string 或最多 16 个 string 的 list (OpenAI 为最多 4 个) */
+    stop?:string|string[]|null;
+    /** 返回 top N(0~20) 最可能 token 的对数概率 (OpenAI 上限为 5) 始终包含采样 token */
+    logprobs?:number|null;
+    /** 存在惩罚 已弃用 传入不再产生任何效果 */
+    presence_penalty?:number;
+    /** 频率惩罚 已弃用 传入不再产生任何效果 */
+    frequency_penalty?:number;
 };
 
 export const DeepseekAPIRole = OpenAIChatAPIRole;
