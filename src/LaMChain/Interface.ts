@@ -93,7 +93,7 @@ export type ToolDefinition<TArgs = JToken, TResult = JToken> = {
     /** 工具名称 */
     name: string;
     /** 工具描述 */
-    description?: string;
+    description: string;
     /** 工具参数 JSON Schema */
     parameters: JObject;
     /** 是否严格模式 */
@@ -104,5 +104,5 @@ export type ToolDefinition<TArgs = JToken, TResult = JToken> = {
 
 /** 工具提供者 */
 export type ToolProvider = {
-    tools: ToolDefinition[];
+    toolList: ToolDefinition[];
 };

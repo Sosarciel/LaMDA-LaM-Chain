@@ -71,14 +71,27 @@ export const stripUndefined = <T extends JToken>(value: T): T => {
  * description 兜底空串 保证产物同时满足 OpenAITool 与 GLMFunctionTool
  * (GLM 要求 description 必填 缺失时发送会报错)
  */
-export const toOpenAITools = (tool: ToolProvider) => {
-    return tool.tools.map(t => ({
-        type: "function" as const,
+export const toOpenAITool = (tool: ToolProvider) => {
+    return tool.toolList.map(t => ({
+        type: "function",
         function: {
             name: t.name,
-            description: t.description ?? "",
+            description: t.description,
             parameters: t.parameters,
             strict: t.strict,
+        },
+    }) satisfies OpenAITool&GLMFunctionTool);
+};
+
+/** 标准化 tools 参数 */
+export const normalizeChatTool = (toolList?: (OpenAITool|GLMFunctionTool)[]) => {
+    if(toolList==null) return undefined;
+    return toolList.map(t => ({
+        ...t,
+        function: {
+            ...t.function,
+            description: t.function.description ?? "",
+            parameters: t.function.parameters ?? {},
         },
     }) satisfies OpenAITool&GLMFunctionTool);
 };

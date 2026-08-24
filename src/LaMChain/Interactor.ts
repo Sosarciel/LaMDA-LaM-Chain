@@ -73,10 +73,10 @@ RES extends AnyOpenAIChatLikeResponse
     let currentBody:REQ = {
         ...param.json,
         messages: [...(param.json.messages ?? [])],
-        tools: param.json.tools ?? LaMChainFunc.toOpenAITools(tool),
+        tools: LaMChainFunc.normalizeChatTool(param.json.tools) ?? LaMChainFunc.toOpenAITool(tool),
     };
 
-    const toolMap = Object.fromEntries(tool.tools.map(t => [t.name, t]));
+    const toolMap = Object.fromEntries(tool.toolList.map(t => [t.name, t]));
 
     for (let loop = 0; loop < maxLoops; loop++) {
         const completedResp = currentResult;
