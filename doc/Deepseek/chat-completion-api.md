@@ -227,6 +227,6 @@ data: [DONE]
 
 ## 相关指南
 
-- JSON Output: 见 guide-json_mode.zh-cn.md
-- Thinking Mode: 见 guide-thinking_mode.zh-cn.md
+- JSON Output: 见 guide-json_mode.md
+- Thinking Mode: 见 guide-thinking_mode.md
 - Tool Calls: 见 guide-tool_calls.md
