@@ -16,7 +16,7 @@ export type OpenAITextLogprobs={
 /** OpenAI 文本 API 回复格式 */
 export type OpenAITextResponse = {
     /** 响应 ID */
-    id: `cmpl-${string}`;
+    id: `cmpl-${string}`|string;
     /** 对象类型 */
     object: "text_completion";
     /** 创建时间戳 */

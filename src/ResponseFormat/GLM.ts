@@ -9,7 +9,7 @@ export type GLMUsage=Omit<OpenAIUsage,"prompt_tokens_details"|"completion_tokens
 };
 
 /** GLM 响应格式 */
-export type GLMResponse = {
+export type GLMChatResponse = {
     /** 响应 ID */
     id: string;
     /** 请求 ID */
@@ -83,7 +83,7 @@ type GLMToolCall = {
     };
 };
 
-export const GLMResponseExample = {
+export const GLMChatResponseExample = {
     id: "8803848869aad374",
     created: 1677723290,
     model: "glm-4.7",
@@ -96,4 +96,4 @@ export const GLMResponseExample = {
         },
     ],
     usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 },
-} satisfies GLMResponse;
+} satisfies GLMChatResponse;

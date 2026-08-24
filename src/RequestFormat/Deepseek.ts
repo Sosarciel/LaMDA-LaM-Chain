@@ -43,7 +43,7 @@ export type DeepseekThinking={
 export type DeepseekReasoningEffort = "low"|"medium"|"high"|"xhigh"|"max";
 
 /** Deepseek 模型请求格式 */
-export type DeepseekRequest={
+export type DeepseekChatRequest={
     /** 模型名称 */
     model: DeepseekModelID|string;
     /** 消息列表 */

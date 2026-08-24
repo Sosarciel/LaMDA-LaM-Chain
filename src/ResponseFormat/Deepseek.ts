@@ -25,7 +25,7 @@ export type DeepseekUsage={
 };
 
 /** Deepseek 响应格式 */
-export type DeepseekResponse = {
+export type DeepseekChatResponse = {
     /** 响应 ID */
     id: string;
     /** 选项列表 */
@@ -120,7 +120,7 @@ export type DeepseekTextResponse={
     system_fingerprint?:string;
 };
 
-export const DeepseekResponseExample = {
+export const DeepseekChatResponseExample = {
     id: "456a034b-6e31-4a4d-9548-e87b5d694ae0",
     object: "chat.completion",
     created: 1759123711,
@@ -145,4 +145,4 @@ export const DeepseekResponseExample = {
         prompt_cache_miss_tokens: 2115,
     },
     system_fingerprint: "fp_8333852bec_prod0820_fp8_kvcache",
-} satisfies DeepseekResponse;
+} satisfies DeepseekChatResponse;

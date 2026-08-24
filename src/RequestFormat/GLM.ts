@@ -61,7 +61,7 @@ export type GLMFunctionTool={
 };
 
 /** GLM 模型请求格式 */
-export type GLMRequest={
+export type GLMChatRequest={
     /** 模型名称 */
     model: GLMModelID|string;
     /** 消息列表 注意不能只包含系统消息或助手消息 */
