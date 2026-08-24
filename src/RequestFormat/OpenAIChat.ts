@@ -18,6 +18,42 @@ export type OpenAIModelID = AnyString
 
 /** OpenAI 推理努力程度 */
 export type OpenAIReasoningEffort = 'none'|'minimal'|'low'|'medium'|'high'|'xhigh';
+
+/** OpenAI 结构化输出的 JSON Schema 配置
+ * @see doc/OpenAI/guide-structured-outputs.md
+ */
+export type OpenAIChatJsonSchemaConfig={
+    /** Schema 名称 (a-z A-Z 0-9 _ - 最大64字符) */
+    name:string;
+    /** Schema 描述 */
+    description?:string;
+    /** JSON Schema 对象 */
+    schema:JObject;
+    /** 是否启用严格 Schema 校验 默认 false */
+    strict?:boolean|null;
+};
+
+/** OpenAI 响应输出格式配置
+ * - text: 普通文本输出(默认)
+ * - json_object: JSON 模式 保证输出合法 JSON 需在消息中指示模型生成 JSON
+ * - json_schema: 结构化输出 仅 gpt-4o-mini / gpt-4o-2024-08-06 及之后模型支持
+ */
+export type OpenAIChatResponseFormat={
+    type:"text";
+}|{
+    type:"json_object";
+}|{
+    type:"json_schema";
+    /** JSON Schema 配置 */
+    json_schema:OpenAIChatJsonSchemaConfig;
+};
+
+/** OpenAI 流式输出选项 */
+export type OpenAIChatStreamOptions={
+    /** 为 true 时在 data: [DONE] 前传输一个含整请求 usage 统计的额外 chunk */
+    include_usage?:boolean;
+};
+
 /** OpenAI 对话请求格式 */
 export type OpenAIChatRequest={
     /** 模型名称 */
@@ -44,6 +80,20 @@ export type OpenAIChatRequest={
     logit_bias?: Record<string, number>|null;
     /** 生成数量 */
     n?: number;
+    /** 响应输出格式
+     * @see doc/OpenAI/guide-structured-outputs.md
+     */
+    response_format?: OpenAIChatResponseFormat;
+    /** 是否以 SSE 流式返回增量 */
+    stream?: boolean|null;
+    /** 流式输出选项 仅 stream=true 时可设置 */
+    stream_options?: OpenAIChatStreamOptions|null;
+    /** 是否返回输出 token 的对数概率 */
+    logprobs?: boolean|null;
+    /** 每个位置返回 top N(0~20) token 的对数概率 需 logprobs=true */
+    top_logprobs?: number|null;
+    /** 终端用户标识 */
+    user?: string;
     /** 可供模型调用的工具列表 */
     tools?: OpenAITool[];
     /** 工具调用控制 */

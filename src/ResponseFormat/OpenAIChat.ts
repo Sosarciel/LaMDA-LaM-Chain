@@ -40,6 +40,26 @@ export type OpenAIChatResponse = {
     /** 选项列表 */
     choices: ChatChoice[];
 };
+/** 对数概率 token (Chat API)
+ * Deepseek 等兼容厂商的 token 级结构与该类型完全相等 可直接复用
+ */
+export type OpenAILogprobToken={
+    /** token 文本 */
+    token:string;
+    /** token 的对数概率 */
+    logprob:number;
+    /** UTF-8 字节表示 */
+    bytes:number[]|null;
+    /** 最可能的 token 列表 */
+    top_logprobs:Exclude<OpenAILogprobToken,'top_logprobs'>[];
+};
+
+/** Chat API 对数概率信息 */
+export type OpenAILogprobs={
+    /** 内容 token 对数概率 */
+    content:OpenAILogprobToken[]|null;
+};
+
 /** 聊天 API 选项格式 */
 type ChatChoice = {
     /** 完成原因 */
@@ -54,7 +74,11 @@ type ChatChoice = {
         content?: string|null;
         /** 工具调用列表 */
         tool_calls?: ChatToolCall[];
+        /** 推理内容(部分兼容厂商返回) */
+        reasoning_content?: string|null;
     };
+    /** 对数概率信息 请求 logprobs=true 时返回 */
+    logprobs?: null|OpenAILogprobs;
 };
 
 /** OpenAI 工具调用项 */

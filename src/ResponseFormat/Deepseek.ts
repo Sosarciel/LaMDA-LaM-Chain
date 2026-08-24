@@ -1,3 +1,4 @@
+import type { OpenAILogprobToken } from "./OpenAIChat";
 import type { DeepseekModelID } from "RequestFormat";
 
 
@@ -72,17 +73,8 @@ type DeepseekToolCall = {
         arguments: string;
     };
 };
-/** Deepseek 对数概率 token */
-type DeepseekLogprobToken = {
-    /** token 文本 */
-    token: string;
-    /** token 的对数概率 */
-    logprob: number;
-    /** UTF-8 字节表示 */
-    bytes: number[]|null;
-    /** 最可能的 token 列表 */
-    top_logprobs: DeepseekLogprobToken[];
-};
+/** Deepseek 对数概率 token 与 OpenAI Chat API 的结构完全相等 直接复用 */
+export type DeepseekLogprobToken = OpenAILogprobToken;
 
 export type TimeoutLimit = {
     error: {
