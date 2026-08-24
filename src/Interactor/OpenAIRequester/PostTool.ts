@@ -1,4 +1,4 @@
-import type { PresetOption, PromiseRetryResult } from '@zwa73/utils';
+import type { PresetOption } from '@zwa73/utils';
 import { SLogger, UtilFunc, UtilHttp } from '@zwa73/utils';
 
 import { LaMChain } from 'LaMChain';
@@ -9,13 +9,12 @@ import type { AnyOpenAIResponse } from 'ResponseFormat';
 import type { Interactor } from 'Interactor/Interface';
 import { PostLaMOptionPreset } from 'Interactor/Interface';
 import { getProxy } from 'Interactor/ProxyPool';
+import { LaMChainResponseVerify } from '@/src/LaMChain/ResponseVerify';
 
 
 
 /**适用与 openai 鉴权方式的post工具 */
-class _OpenAiPostTool implements Interactor<AnyOpenAIResponse> {
-    constructor(){}
-
+export const OpenAiPostTool = {
     /**向 openai模型 发送一个POST请求并接受数据
      * @async
      * @param partialOpt - 可选的参数
@@ -65,13 +64,13 @@ class _OpenAiPostTool implements Interactor<AnyOpenAIResponse> {
         await LaMChain.recordOpenAICost({resp,price:modelData.price,cred,logUsage:true});
 
         return resp;
-    }
+    },
     /**向 openai模型 重复请求发送POST请求并接受数据
      * @async
      * @param partialOpt - 可选的参数
      * @returns 结果 undefined 为未能成功接收
      */
-    async postLaMRepeat(partialOpt:PresetOption<typeof PostLaMOptionPreset>):Promise<PromiseRetryResult<AnyOpenAIResponse | undefined>>{
+    async postLaMRepeat(partialOpt:PresetOption<typeof PostLaMOptionPreset>){
         //解构参数
         const opt = PostLaMOptionPreset.assign(partialOpt);
         const retryOption = UtilFunc.assignOption({},
@@ -80,11 +79,9 @@ class _OpenAiPostTool implements Interactor<AnyOpenAIResponse> {
 
         return await UtilFunc.retryPromise(
             async ()=>this.postLaM(opt),
-            async obj=>await LaMChain.verifyOpenAIResp(obj, opt.cred),
+            async obj=>await LaMChainResponseVerify.verifyOpenAIResp(obj, opt.cred),
             {...retryOption,logFlag:"OpenApiPostTool.postLaMRepeat"}
         );
-    }
-}
-
-export const OpenAiPostTool = new _OpenAiPostTool();
+    },
+} satisfies Interactor<AnyOpenAIResponse>;
 

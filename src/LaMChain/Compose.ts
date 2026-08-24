@@ -6,8 +6,8 @@ import type { AnyOpenAIChatLikeRequest, AnyOpenAILikeRequest, GeminiRequest, Ope
 import type { AnyGeminiResponse, AnyOpenAIChatLikeResponse, AnyOpenAIResponse, GeminiResponse, OpenAITextResponse } from "ResponseFormat";
 
 import type { LaMPostRequestFunc } from "./Interface";
-import { LaMChainFunc } from "./LaMChainFunc";
-import { LaMChainInteractor } from "./LaMChainInteractor";
+import { LaMChainFunc } from "./Func";
+import { LaMChainInteractor } from "./Interactor";
 
 
 /**偏函数化与快捷包装 */

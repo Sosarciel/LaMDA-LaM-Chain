@@ -5,8 +5,8 @@ import type { AnyOpenAIChatLikeRequest, AnyTextCompletionRequest } from "Request
 import type { AnyOpenAIChatLikeResponse, AnyTextCompletionResponse } from "ResponseFormat";
 
 import type { CredProvider, ModelInfo, SourceProvider, ToolProvider } from "./Interface";
-import { LaMChainCompose } from "./LaMChainCompose";
-import { LaMChainFunc } from "./LaMChainFunc";
+import { LaMChainCompose } from "./Compose";
+import { LaMChainFunc } from "./Func";
 
 export namespace LaMChainInteractor{
 
