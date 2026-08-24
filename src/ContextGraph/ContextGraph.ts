@@ -1,6 +1,7 @@
 import { SLogger, throwError } from "@zwa73/utils";
 import type { DeepReadonly, MPromise } from "@zwa73/utils";
-import { BlockProcessContext, BlockProcessResult, ContextBudget, ContextGraphBlock, ContextSchema } from "./Interface";
+
+import type { BlockProcessContext, BlockProcessResult, ContextBudget, ContextGraphBlock, ContextSchema } from "./Interface";
 import { BlockProcessorTable } from "./ProcessorTable";
 
 /** ContextGraph 构造函数配置选项 */

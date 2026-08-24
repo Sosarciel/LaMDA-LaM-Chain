@@ -1,5 +1,6 @@
-import type { OpenAILogprobToken } from "./OpenAIChat";
 import type { DeepseekModelID } from "RequestFormat";
+
+import type { OpenAILogprobToken } from "./OpenAIChat";
 
 
 /** Deepseek 响应格式 */

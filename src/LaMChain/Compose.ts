@@ -5,9 +5,9 @@ import { GeminiPostTool, OpenAiPostTool } from "Interactor";
 import type { AnyOpenAIChatLikeRequest, AnyOpenAILikeRequest, GeminiRequest, OpenAITextRequest } from "RequestFormat";
 import type { AnyGeminiResponse, AnyOpenAIChatLikeResponse, AnyOpenAIResponse, GeminiResponse, OpenAITextResponse } from "ResponseFormat";
 
-import type { LaMPostRequestFunc } from "./Interface";
 import { LaMChainFunc } from "./Func";
 import { LaMChainInteractor } from "./Interactor";
+import type { LaMPostRequestFunc } from "./Interface";
 
 
 /**偏函数化与快捷包装 */

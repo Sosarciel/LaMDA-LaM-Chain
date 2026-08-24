@@ -1,5 +1,6 @@
 import type { MPromise } from "@zwa73/utils";
-import { ContextGraph, ContextGraphOption } from "./ContextGraph";
+
+import type { ContextGraph, ContextGraphOption } from "./ContextGraph";
 
 /** 声明扩展注册接口：调用方可通过 declare module 全局扩展此接口指定默认 Context 类型 */
 export interface ContextSchema { };

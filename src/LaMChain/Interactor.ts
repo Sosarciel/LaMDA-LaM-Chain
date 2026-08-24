@@ -4,9 +4,9 @@ import type { Interactor } from "Interactor";
 import type { AnyOpenAIChatLikeRequest, AnyTextCompletionRequest } from "RequestFormat";
 import type { AnyOpenAIChatLikeResponse, AnyTextCompletionResponse } from "ResponseFormat";
 
-import type { CredProvider, ModelInfo, SourceProvider, ToolProvider } from "./Interface";
 import { LaMChainCompose } from "./Compose";
 import { LaMChainFunc } from "./Func";
+import type { CredProvider, ModelInfo, SourceProvider, ToolProvider } from "./Interface";
 
 export namespace LaMChainInteractor{
 

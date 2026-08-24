@@ -1,7 +1,8 @@
 import { SLogger } from "@zwa73/utils";
 import type { MPromise } from "@zwa73/utils";
-import { BlockProcessContext, BlockProcessResult, BudgetBlock, ConstantBlock, ContextSchema, GraphBlock, WindowBlock } from "./Interface";
+
 import { ContextGraph } from "./ContextGraph";
+import type { BlockProcessContext, BlockProcessResult, BudgetBlock, ConstantBlock, ContextSchema, GraphBlock, WindowBlock } from "./Interface";
 
 
 /** 计算 Context[] 消息列表总 Token 长度的辅助函数 */
