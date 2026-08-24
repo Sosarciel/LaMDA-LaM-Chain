@@ -1,4 +1,3 @@
-import type { PresetOption } from '@zwa73/utils';
 import { SLogger, UtilFunc, UtilHttp } from '@zwa73/utils';
 
 import { LaMChain } from 'LaMChain';
@@ -11,14 +10,9 @@ import { getProxy } from 'Interactor/ProxyPool';
 import { LaMChainResponseVerify } from '@/src/LaMChain/ResponseVerify';
 
 
-/**适用与 openai 鉴权方式的post工具 */
+/**适用与 Gemini 鉴权方式的post工具 */
 export const GeminiPostTool = {
-    /**向 openai模型 发送一个POST请求并接受数据
-     * @async
-     * @param partialOpt - 可选的参数
-     * @returns 结果 undefined 为未能成功接收
-     */
-    async postLaM(partialOpt:PresetOption<typeof PostLaMOptionPreset>){
+    async postLaM(partialOpt){
         const opt = PostLaMOptionPreset.assign(partialOpt);
         const {cred,source,modelData,timeLimit} = opt;
         const postJson = opt.postJson;
@@ -79,12 +73,7 @@ export const GeminiPostTool = {
 
         return resp;
     },
-    /**向 openai模型 重复请求发送POST请求并接受数据
-     * @async
-     * @param partialOpt - 可选的参数
-     * @returns 结果 undefined 为未能成功接收
-     */
-    async postLaMRepeat(partialOpt:PresetOption<typeof PostLaMOptionPreset>){
+    async postLaMRepeat(partialOpt){
         //解构参数
         const opt = PostLaMOptionPreset.assign(partialOpt);
         const retryOption = UtilFunc.assignOption({},

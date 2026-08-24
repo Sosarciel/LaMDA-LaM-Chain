@@ -16,11 +16,6 @@ import { LaMChainResponseVerify } from '@/src/LaMChain/ResponseVerify';
 
 /**适用与 openai 鉴权方式的post工具 */
 export const OpenAiPostTool = {
-    /**向 openai模型 发送一个POST请求并接受数据
-     * @async
-     * @param partialOpt - 可选的参数
-     * @returns 结果 undefined 为未能成功接收
-     */
     async postLaM(partialOpt:PresetOption<typeof PostLaMOptionPreset>){
         const opt = PostLaMOptionPreset.assign(partialOpt);
         const {cred,source,modelData,timeLimit} = opt;
@@ -66,11 +61,6 @@ export const OpenAiPostTool = {
 
         return resp;
     },
-    /**向 openai模型 重复请求发送POST请求并接受数据
-     * @async
-     * @param partialOpt - 可选的参数
-     * @returns 结果 undefined 为未能成功接收
-     */
     async postLaMRepeat(partialOpt:PresetOption<typeof PostLaMOptionPreset>){
         //解构参数
         const opt = PostLaMOptionPreset.assign(partialOpt);
