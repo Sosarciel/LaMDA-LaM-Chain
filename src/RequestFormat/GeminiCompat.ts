@@ -22,7 +22,24 @@ export type GeminiCompatRequest={
     presence_penalty?: number;
     /** 频率惩罚 */
     frequency_penalty?: number;
-    /** 额外请求体 */
+    /** 额外请求体
+     * Google 在OpenAI的SDK上嵌套了两次 extra_body 即真实含有 extra_body 字段
+     * @example
+     * client.chat.completions.create(
+     *     model="gemini-3.5-flash",
+     *     messages=[{"role": "user", "content": "Explain to me how AI works"}],
+     *     extra_body={
+     *       'extra_body': {
+     *         "google": {
+     *           "thinking_config": {
+     *             "thinking_level": "low",
+     *             "include_thoughts": True
+     *           }
+     *         }
+     *       }
+     *     }
+     * )
+     */
     extra_body?:{
         /** Google 特定配置 */
         google?:{
