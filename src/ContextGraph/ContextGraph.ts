@@ -171,7 +171,7 @@ export class ContextGraph<Context = ContextSchema> {
 
         if (fixedVerbose) {
             SLogger.info(
-                `[ContextGraph] 开始编排上下文 总预算 maxLength:${this.maxBudget.maxLength}, maxCount:${this.maxBudget.maxCount}, 区块总数:${this._blockList.length}`
+                `[ContextGraph] 开始编排上下文 总预算 maxLength:${remainingGlobalBudget.maxLength}, maxCount:${remainingGlobalBudget.maxCount}, 区块总数:${this._blockList.length}`
             );
         }
 
