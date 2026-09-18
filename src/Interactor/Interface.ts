@@ -1,4 +1,4 @@
-import type { PromiseRetries, PromiseRetryResult } from "@zwa73/js-utils";
+import type { PromiseRetryOption, PromiseRetryResult } from "@zwa73/js-utils";
 import type { PresetOption } from "@zwa73/utils";
 import { preset } from "@zwa73/utils";
 
@@ -45,7 +45,7 @@ export type PostLaMOption={
     /**单个超时时间/毫秒 最小为10000毫秒 -1为不存在 */
     timeLimit:number;
     /**重试选项 */
-    retryOption:PromiseRetries;
+    retryOption:PromiseRetryOption;
 }
 /**默认的聊天设置 */
 export const PostLaMOptionPreset = preset<PostLaMOption>()({

@@ -80,10 +80,10 @@ export const GeminiPostTool = {
             PostLaMOptionPreset.default().retryOption,
             partialOpt.retryOption);
 
-        return await UtilFunc.retryPromise(
-            async ()=>this.postLaM(opt),
-            async obj=>await LaMChainResponseVerify.verifyGeminiResp(obj, opt.cred),
-            {...retryOption,logFlag:"GeminiPostTool.postLaMRepeat"}
-        );
+        return await UtilFunc.retryPromise({
+            task:async ()=>this.postLaM(opt),
+            verify:async obj=>await LaMChainResponseVerify.verifyGeminiResp(obj, opt.cred),
+            retry:{...retryOption,logFlag:"GeminiPostTool.postLaMRepeat"}
+        });
     },
 } satisfies Interactor<AnyGeminiResponse>;

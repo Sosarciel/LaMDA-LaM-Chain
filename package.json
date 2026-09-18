@@ -1,6 +1,6 @@
 {
 	"name": "@sosraciel-lamda/lam-chain",
-	"version": "1.0.9",
+	"version": "1.0.10",
 	"main": "dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
@@ -28,8 +28,8 @@
 	],
 	"dependencies": {
 		"@anush008/tokenizers": "^0.0.0",
-		"@zwa73/js-utils": "^1.0.89",
-		"@zwa73/utils": "^1.0.302",
+		"@zwa73/js-utils": "^1.0.91",
+		"@zwa73/utils": "^1.0.303",
 		"undici": "^6.24.1"
 	},
 	"peerDependencies": {

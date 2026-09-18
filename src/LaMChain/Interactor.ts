@@ -1,4 +1,4 @@
-import type { MPromise, PromiseRetries } from "@zwa73/js-utils";
+import type { MPromise, PromiseRetryOption } from "@zwa73/js-utils";
 
 import type { Interactor } from "Interactor";
 import type { AnyOpenAIChatLikeRequest, AnyTextCompletionRequest } from "RequestFormat";
@@ -24,7 +24,7 @@ R extends AnyTextCompletionResponse,
     /**请求体 */
     json:T;
     /**重试参数 */
-    retry?:PromiseRetries;
+    retry?:PromiseRetryOption;
     /**交互器 */
     interactor:Interactor<R>;
 })=>{
@@ -55,7 +55,7 @@ RES extends AnyOpenAIChatLikeResponse
     /** 原始请求 */
     json: REQ;
     /** 重试参数 */
-    retry?: PromiseRetries;
+    retry?: PromiseRetryOption;
     /** 请求修改器 */
     patch?: (param: {
         /** 上次响应 */

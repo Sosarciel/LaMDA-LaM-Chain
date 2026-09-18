@@ -68,11 +68,11 @@ export const OpenAiPostTool = {
             PostLaMOptionPreset.default().retryOption,
             partialOpt.retryOption);
 
-        return await UtilFunc.retryPromise(
-            async ()=>this.postLaM(opt),
-            async obj=>await LaMChainResponseVerify.verifyOpenAIResp(obj, opt.cred),
-            {...retryOption,logFlag:"OpenApiPostTool.postLaMRepeat"}
-        );
+        return await UtilFunc.retryPromise({
+            task: async ()=>this.postLaM(opt),
+            verify:async obj=>await LaMChainResponseVerify.verifyOpenAIResp(obj, opt.cred),
+            retry:{...retryOption,logFlag:"OpenApiPostTool.postLaMRepeat"}
+        });
     },
 } satisfies Interactor<AnyOpenAIResponse>;
 

@@ -1,4 +1,4 @@
-import type { JObject, JToken, MPromise, PromiseRetries, PromiseRetryResult } from "@zwa73/js-utils";
+import type { JObject, JToken, MPromise, PromiseRetryOption, PromiseRetryResult } from "@zwa73/js-utils";
 
 /**价格 */
 export type ModelPrice=Partial<{
@@ -53,8 +53,8 @@ export type SourceProvider = {
     proxyUrl?:string;
     /**所用协议 默认https */
     protocol?:'http' | 'https';
-    /**重试设定 PromiseRetries */
-    retry?:PromiseRetries;
+    /**重试设定 PromiseRetryOption */
+    retry?:PromiseRetryOption;
     /**modelid 映射  
      * 用于处理类似SiliconFlow的模型id不一致问题
      */
@@ -81,8 +81,8 @@ export type LaMPostRequestFunc<I,O> = (param:{
     model:ModelInfo;
     /**请求体 */
     json:I;
-    /**重试设定 PromiseRetries */
-    retry?:PromiseRetries;
+    /**重试设定 PromiseRetryOption */
+    retry?:PromiseRetryOption;
 })=>MPromise<PromiseRetryResult<O|undefined>>;
 
 /**用量计算函数类型 */
